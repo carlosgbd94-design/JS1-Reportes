@@ -15,6 +15,10 @@ const SHEET_REMINDER_LOG = "REMINDER_LOG";
 const SHEET_NOTIFICATIONS = "NOTIFICACIONES";
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycby3en_qswj1PmE6o80nypsDM6Gw4kueRUimNSgMKJxzDojRFCsXBjFZngR9UpnkYL0n/exec";
 const DRIVE_ROOT_FOLDER_ID = "1peAgAjdKkjAHJGMcHbdPLKiXlqIwUm_J";
+const CACHE_TTL_USERS = 3600; // 1 hora
+const CACHE_TTL_ASSETS = 21600; // 6 horas
+const CACHE_TTL_UNITS = 3600; // 1 hora
+const PASS_SALT = "JS1_SALT_2026_MX"; // Salt para haseo
 
 
 /** ===== NOTIFICACIONES / CORREOS ===== **/
@@ -91,16 +95,29 @@ function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
-/** ===== ASSETS: Data URL (base64) ===== **/
+/** ===== ASSETS: Data URL (base64) con Caché ===== **/
 function getAssetDataUrl_(key) {
+  const cacheKey = "ASSET_" + key;
+  const cached = CacheService.getScriptCache().get(cacheKey);
+  if (cached) return cached;
+
   const id = ASSET_IDS[key];
   if (!id) return "";
 
-  const file = DriveApp.getFileById(id);
-  const blob = file.getBlob();
-  const mime = blob.getContentType() || "image/png";
-  const b64 = Utilities.base64Encode(blob.getBytes());
-  return `data:${mime};base64,${b64}`;
+  try {
+    const file = DriveApp.getFileById(id);
+    const blob = file.getBlob();
+    const mime = blob.getContentType() || "image/png";
+    const b64 = Utilities.base64Encode(blob.getBytes());
+    const dataUrl = `data:${mime};base64,${b64}`;
+    
+    // Almacenar en caché por 6 horas
+    CacheService.getScriptCache().put(cacheKey, dataUrl, CACHE_TTL_ASSETS);
+    return dataUrl;
+  } catch (e) {
+    Logger.log("Error cargando asset " + key + ": " + e.message);
+    return "";
+  }
 }
 
 /** ===== DISPATCH API ===== **/
@@ -393,7 +410,16 @@ function notificationTargetsUser_(notif, u) {
   }
 
   if (scope === "MUNICIPIO") {
-    return normalizeTextKey_(notif.target_municipio) === userMunicipio;
+    const matchMuni = normalizeTextKey_(notif.target_municipio) === userMunicipio;
+    if (!matchMuni) return false;
+
+    // RESTRICCIÓN: Notificaciones enviadas por JURISDICCIONAL a un MUNICIPIO
+    // solo deben ser visibles para el rol MUNICIPAL (y ADMIN), no para UNIDAD.
+    if (String(notif.from_rol || "").toUpperCase() === "JURISDICCIONAL") {
+      return userRol === "MUNICIPAL" || userRol === "ADMIN";
+    }
+
+    return true;
   }
 
   if (scope === "ALL_MY_UNITS") {
@@ -895,6 +921,14 @@ function escapeHtml_(text) {
 }
 
 function getAllActiveUnits_() {
+  const cacheKey = "ALL_ACTIVE_UNITS";
+  const cached = CacheService.getScriptCache().get(cacheKey);
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch (e) {}
+  }
+
   const sh = getSheet_(SHEET_UNIDADES);
   const last = sh.getLastRow();
   if (last < 2) return [];
@@ -930,6 +964,12 @@ function getAllActiveUnits_() {
     Number(a.orden_clues) - Number(b.orden_clues) ||
     String(a.unidad).localeCompare(String(b.unidad), "es")
   );
+
+  try {
+    CacheService.getScriptCache().put(cacheKey, JSON.stringify(out), CACHE_TTL_UNITS);
+  } catch (e) {
+    Logger.log("Error guardando unidades en caché: " + e.message);
+  }
 
   return out;
 }
@@ -1135,6 +1175,27 @@ function canSeeMunicipio_(user, municipio) {
   return allowed.includes(m);
 }
 
+/** ===== HASHING ===== **/
+function hashPassword_(pass) {
+  if (!pass) return "";
+  const salted = pass + PASS_SALT;
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, salted);
+  let hash = "";
+  for (let i = 0; i < digest.length; i++) {
+    let byte = digest[i];
+    if (byte < 0) byte += 256;
+    let hex = byte.toString(16);
+    if (hex.length === 1) hex = "0" + hex;
+    hash += hex;
+  }
+  return hash;
+}
+
+function isHashed_(pass) {
+  // Un hash SHA-256 en hexadecimal tiene 64 caracteres
+  return /^[a-f0-9]{64}$/.test(pass);
+}
+
 /** ===== USERS SHEET ===== **/
 function ensureUsersSheet_() {
   const sh = getSheet_(SHEET_USERS);
@@ -1146,6 +1207,14 @@ function ensureUsersSheet_() {
 }
 
 function getUser_(usuario) {
+  const cacheKey = "USER_" + normalize_(usuario);
+  const cached = CacheService.getScriptCache().get(cacheKey);
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch (e) {}
+  }
+
   const sh = ensureUsersSheet_();
   const last = sh.getLastRow();
   if (last < 2) return null;
@@ -1158,7 +1227,7 @@ function getUser_(usuario) {
       const municipioRaw = normalize_(r[2]);
       const activo = (normalize_(r[6]) || "SI").toUpperCase();
 
-            return {
+      const userObj = {
         row: i + 2,
         usuario: normalize_(r[0]),
         password: normalize_(r[1]),
@@ -1173,9 +1242,27 @@ function getUser_(usuario) {
         reset_token: normalize_(r[9]),
         reset_expires: r[10]
       };
+
+      try {
+        CacheService.getScriptCache().put(cacheKey, JSON.stringify(userObj), CACHE_TTL_USERS);
+      } catch (e) {}
+
+      return userObj;
     }
   }
   return null;
+}
+
+function clearUserCache_(usuario) {
+  try {
+    CacheService.getScriptCache().remove("USER_" + normalize_(usuario));
+  } catch (e) {}
+}
+
+function clearUnitsCache_() {
+  try {
+    CacheService.getScriptCache().remove("ALL_ACTIVE_UNITS");
+  } catch (e) {}
 }
 
 function getUserByToken_(token) {
@@ -2509,24 +2596,43 @@ function api_login(payload) {
 
     const u = getUser_(usuario);
     if (!u || u.activo !== "SI") return { ok:false, error:"Usuario no existe o está inactivo." };
-    if (u.password !== password) return { ok:false, error:"Contraseña incorrecta." };
 
-return {
-  ok:true,
-  data:{
-    token: makeToken_(u.usuario),
-    mustChange: String(u.must_change || "").toUpperCase() === "SI",
-    user: {
-      usuario: u.usuario,
-      municipio: u.municipio,
-      municipiosAllowed: u.municipiosAllowed,
-      clues: u.clues,
-      unidad: u.unidad,
-      rol: u.rol,
-      email: u.email || ""
+    const inputHash = hashPassword_(password);
+    let authOk = false;
+
+    // Caso 1: Ya está haseada
+    if (isHashed_(u.password)) {
+      authOk = (u.password === inputHash);
+    } 
+    // Caso 2: Migración (está en texto plano)
+    else {
+      authOk = (u.password === password);
+      if (authOk) {
+        // MIGRACIÓN: Hasear la contraseña ahora que sabemos que es correcta
+        const sh = ensureUsersSheet_();
+        sh.getRange(u.row, 2).setValue(inputHash);
+        clearUserCache_(u.usuario);
+      }
     }
-  }
-};
+
+    if (!authOk) return { ok:false, error:"Contraseña incorrecta." };
+
+    return {
+      ok:true,
+      data:{
+        token: makeToken_(u.usuario),
+        mustChange: String(u.must_change || "").toUpperCase() === "SI",
+        user: {
+          usuario: u.usuario,
+          municipio: u.municipio,
+          municipiosAllowed: u.municipiosAllowed,
+          clues: u.clues,
+          unidad: u.unidad,
+          rol: u.rol,
+          email: u.email || ""
+        }
+      }
+    };
   } catch (e) {
     return { ok:false, error:String(e.message || e) };
   }
@@ -3741,28 +3847,18 @@ function api_updateSR(payload) {
     const row = findRowByFechaClues_(sh, fecha, u.clues);
     if (!row) return { ok:false, error:`No se encontró captura de existencia de biológicos para editar (${fecha}).` };
 
-    sh.getRange(row, 7).setValue(bcg);
-    sh.getRange(row, 8).setValue(hepatitis_b);
-    sh.getRange(row, 9).setValue(hexavalente);
-    sh.getRange(row, 10).setValue(dpt);
-    sh.getRange(row, 11).setValue(rotavirus);
-    sh.getRange(row, 12).setValue(neumococica_13);
-    sh.getRange(row, 13).setValue(neumococica_20);
-    sh.getRange(row, 14).setValue(srp);
-    sh.getRange(row, 15).setValue(sr);
-    sh.getRange(row, 16).setValue(vph);
-    sh.getRange(row, 17).setValue(varicela);
-    sh.getRange(row, 18).setValue(hepatitis_a);
-    sh.getRange(row, 19).setValue(td);
-    sh.getRange(row, 20).setValue(tdpa);
-    sh.getRange(row, 21).setValue(covid_19);
-    sh.getRange(row, 22).setValue(influenza);
-    sh.getRange(row, 23).setValue(vsr);
-    sh.getRange(row, 24).setValue(nombre);
+    // ✅ BATCH UPDATE: Agrupar valores de biológicos (columnas 7 a 24)
+    const bioValues = [[
+      bcg, hepatitis_b, hexavalente, dpt, rotavirus,
+      neumococica_13, neumococica_20, srp, sr, vph,
+      varicela, hepatitis_a, td, tdpa, covid_19, influenza, vsr,
+      nombre
+    ]];
+    sh.getRange(row, 7, 1, 18).setValues(bioValues);
 
-    sh.getRange(row, 25).setValue("SI");
-    sh.getRange(row, 26).setValue(u.usuario);
-    sh.getRange(row, 27).setValue(new Date());
+    // ✅ BATCH UPDATE: Metadatos de edición (columnas 25 a 27)
+    const metaValues = [["SI", u.usuario, new Date()]];
+    sh.getRange(row, 25, 1, 3).setValues(metaValues);
 
     return { ok:true, message:"Existencia de biológicos actualizada." };
   } catch (e) {
@@ -3806,16 +3902,12 @@ function api_updateConsumibles(payload) {
       return { ok:false, error:`No se encontró captura de consumibles para editar (${fecha}).` };
     }
 
-    sh.getRange(row, 7).setValue(srp_dosis);
-    sh.getRange(row, 8).setValue(sr_dosis);
-    sh.getRange(row, 9).setValue(j1);
-    sh.getRange(row, 10).setValue(j2);
-    sh.getRange(row, 11).setValue(aguja);
-    sh.getRange(row, 12).setValue(nombre);
-
-    sh.getRange(row, 13).setValue("SI");
-    sh.getRange(row, 14).setValue(u.usuario);
-    sh.getRange(row, 15).setValue(new Date());
+    // ✅ BATCH UPDATE: Agrupar valores de consumibles (columnas 7 a 15)
+    const consValues = [[
+      srp_dosis, sr_dosis, j1, j2, aguja, 
+      nombre, "SI", u.usuario, new Date()
+    ]];
+    sh.getRange(row, 7, 1, 9).setValues(consValues);
 
     return { ok:true, message:"Consumibles actualizado correctamente." };
   } catch (e) {
@@ -3936,11 +4028,13 @@ function api_saveBio(payload) {
     let updatedCount = 0;
     let insertedCount = 0;
 
+    const newRows = [];
     checked.rows.forEach(item => {
       const ya = existentesMap[normalizeTextKey_(item.biologico)];
 
       if (ya && ya.row) {
-        sh.getRange(ya.row, 9, 1, 8).setValues([[
+        // Optimización: actualización en lote de datos y metadatos (columnas 9 a 19)
+        sh.getRange(ya.row, 9, 1, 11).setValues([[
           item.max_dosis,
           item.min_dosis,
           item.promedio_frascos,
@@ -3948,17 +4042,15 @@ function api_saveBio(payload) {
           item.pedido_frascos,
           item.alerta_promedio,
           item.alerta_multiplo,
-          nombre
+          nombre,
+          "SI",
+          u.usuario,
+          new Date()
         ]]);
-
-        sh.getRange(ya.row, 17).setValue("SI");
-        sh.getRange(ya.row, 18).setValue(u.usuario);
-        sh.getRange(ya.row, 19).setValue(new Date());
-
         updatedCount++;
-
       } else {
-        sh.appendRow([
+        // Recolectar para inserción en lote
+        newRows.push([
           makeId_(),
           new Date(),
           todayStr_(),
@@ -3979,10 +4071,13 @@ function api_saveBio(payload) {
           "",
           ""
         ]);
-
         insertedCount++;
       }
     });
+
+    if (newRows.length > 0) {
+      sh.getRange(sh.getLastRow() + 1, 1, newRows.length, 19).setValues(newRows);
+    }
 
     return {
       ok:true,
@@ -4098,7 +4193,12 @@ function api_changeMyPassword(payload) {
     requireNonEmpty_("Nueva contraseña", newPassword);
     requireNonEmpty_("Confirmación de nueva contraseña", confirmPassword);
 
-    if (u.password !== currentPassword) {
+    // Verificar contraseña actual (soporta haseada o plano para migración)
+    const currentHash = hashPassword_(currentPassword);
+    const storedPass = u.password;
+    let authOk = isHashed_(storedPass) ? (storedPass === currentHash) : (storedPass === currentPassword);
+
+    if (!authOk) {
       return { ok:false, error:"La contraseña actual no es correcta." };
     }
 
@@ -4114,12 +4214,15 @@ function api_changeMyPassword(payload) {
       return { ok:false, error:"La nueva contraseña debe ser distinta a la actual." };
     }
 
-    sh.getRange(u.row, 2).setValue(newPassword); // password
-    sh.getRange(u.row, 9).setValue("NO");        // must_change
-    sh.getRange(u.row, 10).setValue("");         // reset_token
-    sh.getRange(u.row, 11).setValue("");         // reset_expires
+    const newHash = hashPassword_(newPassword);
+    sh.getRange(u.row, 2).setValue(newHash); // password haseada
+    sh.getRange(u.row, 9).setValue("NO");     // must_change
+    sh.getRange(u.row, 10).setValue("");      // reset_token
+    sh.getRange(u.row, 11).setValue("");      // reset_expires
 
-    return { ok:true, message:"Contraseña actualizada correctamente." };
+    clearUserCache_(u.usuario);
+
+    return { ok:true, message:"Contraseña actualizada correctamente y protegida." };
   } catch (e) {
     return { ok:false, error:String(e.message || e) };
   }
@@ -4344,7 +4447,7 @@ function api_adminCreateUser(payload) {
 
     sh.appendRow([
       usuario,
-      password,
+      hashPassword_(password),
       muniFinal,
       clues,
       unidad,
@@ -4356,7 +4459,9 @@ function api_adminCreateUser(payload) {
       ""    // reset_expires
     ]);
 
-    return { ok:true, message:"Usuario creado." };
+    clearUserCache_(usuario);
+
+    return { ok:true, message:"Usuario creado y contraseña protegida." };
 
   } catch (e) {
     return { ok:false, error:String(e.message || e) };
@@ -4377,12 +4482,14 @@ function api_adminResetPassword(payload) {
     const u = getUser_(usuario);
     if (!u) throw new Error("Usuario no encontrado.");
 
-    sh.getRange(u.row, 2).setValue(newPassword); // password
-    sh.getRange(u.row, 9).setValue("SI");        // must_change
-    sh.getRange(u.row, 10).setValue("");         // reset_token
-    sh.getRange(u.row, 11).setValue("");         // reset_expires
+    sh.getRange(u.row, 2).setValue(hashPassword_(newPassword)); // password haseada
+    sh.getRange(u.row, 9).setValue("SI");                       // must_change
+    sh.getRange(u.row, 10).setValue("");                        // reset_token
+    sh.getRange(u.row, 11).setValue("");                        // reset_expires
 
-    return { ok:true, message:"Contraseña actualizada. El usuario deberá cambiarla al iniciar sesión." };
+    clearUserCache_(u.usuario);
+
+    return { ok:true, message:"Contraseña actualizada y protegida. El usuario deberá cambiarla al iniciar sesión." };
   } catch (e) {
     return { ok:false, error:String(e.message || e) };
   }
@@ -4402,7 +4509,8 @@ function api_adminSetActive(payload) {
     if (!u) throw new Error("Usuario no encontrado.");
 
     sh.getRange(u.row, 7).setValue(activo);
-    return { ok:true, message:"Estatus actualizado." };
+    clearUserCache_(u.usuario);
+    return { ok:true, message:"Estatus actualizado en base y caché." };
   } catch (e) {
     return { ok:false, error:String(e.message || e) };
   }
