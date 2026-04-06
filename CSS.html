@@ -1233,23 +1233,53 @@
     padding: 2px 0;
   }
 
-  .notifBadgeCounter {
+  .notifBadgeCounter,
+  .liveBadge {
     position: absolute;
-    top: -4px;
-    right: -4px;
-    background: #ef4444;
-    color: white;
-    font-size: 9px;
-    font-weight: 900;
-    min-width: 14px;
-    height: 14px;
-    border-radius: 7px;
+    top: -6px;
+    right: -6px;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0 2px;
-    border: 1.5px solid white;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+    color: #ffffff;
+    background: linear-gradient(135deg, #ff5f5f, #e63946);
+    border: 1.5px solid #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    z-index: 20;
+    pointer-events: none;
+    transform: scale(1);
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  .notifBadgeCounter.pulse,
+  .liveBadge.pulse {
+    animation: badgePulse 2s infinite ease-in-out;
+  }
+
+  @keyframes badgePulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+  }
+
+  .liveBadge:empty,
+  .notifBadgeCounter:empty {
+    display: none;
+  }
+
+  /* 🔥 CORRECCIÓN GLOBAL: Permitir que los badges sobresalgan de los botones sin recortarse */
+  .ghostBtn,
+  .md-btn-icon,
+  .badge-wrapper,
+  .tab {
+    overflow: visible !important;
   }
 
   .topNotifHeadActions .ghostBtn,
@@ -2189,58 +2219,87 @@
     font-size: 14px;
   }
 
-  .liveBadge,
-  .softBadge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 22px;
-    height: 22px;
-    padding: 0 8px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 900;
-    line-height: 1;
-    border: 1px solid rgba(0, 0, 0, .10);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .10),
-      0 8px 18px rgba(0, 0, 0, .18);
-    vertical-align: middle;
-  }
-
-  body.mobile-mode .liveBadge,
-  body.mobile-mode .softBadge {
-    min-width: 24px;
-    height: 24px;
-    padding: 0 8px;
-    font-size: 11px;
-  }
-
   #notifBadgeMain {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Contenedor relativo para que el badge flote sobre el elemento */
+  .badge-wrapper {
+    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    vertical-align: middle;
   }
 
   .liveBadge {
-    color: var(--text);
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-  }
-
-  #tabNOTIFS {
+    position: absolute;
+    top: -6px;
+    right: -6px;
     display: flex;
     align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+    color: #ffffff;
+    background: linear-gradient(135deg, #ff5f5f, #e63946);
+    border: 1.5px solid var(--md-sys-color-surface, #ffffff);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    z-index: 10;
+    pointer-events: none;
+    transform: scale(1);
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   }
 
-  #tabNOTIFS .liveBadge {
-    align-self: center;
-    transform: translateY(-1px);
+  .liveBadge:empty {
+    display: none;
   }
 
-  .softBadge {
-    color: var(--text);
-    background: linear-gradient(135deg, rgba(239, 68, 68, .18), rgba(220, 38, 38, .10));
-    border-color: rgba(239, 68, 68, .28);
+  /* Animación de pulso leve para el badge */
+  @keyframes badgePulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+  }
+
+  .liveBadge.pulse {
+    animation: badgePulse 2s infinite ease-in-out;
+  }
+
+  /* Botón de Icono Compacto (MD3) */
+  .md-btn-icon {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    color: var(--md-sys-color-on-surface-variant);
+  }
+
+  .md-btn-icon:hover {
+    background: rgba(0, 0, 0, 0.08);
+  }
+
+  .md-btn-icon .material-symbols-rounded {
+    font-size: 20px;
+  }
+
+  /* Ajuste para los badges en las tabs */
+  .tab .badge-wrapper {
+    margin-right: -4px;
   }
 
   /* ===== TABS CON LOOK MÁS PREMIUM ===== */
