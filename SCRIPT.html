@@ -707,11 +707,12 @@
           ? `
                 <button
                   type="button"
-                  class="md-btn md-btn-filled"
+                  class="md-btn-icon"
+                  title="Confirmar recibido"
                   onclick="confirmPinolReceiptFlow('${escapeAttr(item.id || "")}')"
+                  style="color: var(--md-sys-color-primary);"
                 >
                   <span class="material-symbols-rounded">task_alt</span>
-                  Confirmar recibido
                 </button>
               `
           : ``
@@ -721,11 +722,12 @@
           ? `
                 <button
                   type="button"
-                  class="md-btn md-btn-tonal"
+                  class="md-btn-icon"
+                  title="Marcar como leída"
                   onclick="markNotificationReadFlow('${escapeAttr(item.id || "")}')"
+                  style="color: var(--md-sys-color-primary);"
                 >
                   <span class="material-symbols-rounded">done</span>
-                  Leída
                 </button>
               `
           : ``
@@ -733,11 +735,12 @@
 
           <button
             type="button"
-            class="md-btn md-btn-outlined"
+            class="md-btn-icon"
+            title="Borrar notificación"
             onclick="deleteNotificationFlow('${escapeAttr(item.id || "")}')"
+            style="color: var(--md-sys-color-error);"
           >
             <span class="material-symbols-rounded">delete</span>
-            Borrar
           </button>
         </div>
       </div>
@@ -1132,7 +1135,8 @@
       if (!btn) return;
 
       if (id.includes("TopNotif")) {
-        btn.innerHTML = `<span class="material-symbols-rounded">done_all</span>` + (count > 0 ? `<span class="notifBadgeCounter">${count}</span>` : "");
+        const badgeHtml = count > 0 ? `<span class="notifBadgeCounter pulse">${count}</span>` : "";
+        btn.innerHTML = `<span class="material-symbols-rounded">done_all</span>${badgeHtml}`;
         btn.title = count > 0 ? `Marcar ${count} visibles como leídas` : "Marcar visibles";
       } else {
         btn.innerHTML = label;
@@ -1821,10 +1825,24 @@
 
     if (scope === "USUARIO") {
       users = getNotifUsersByFilters({ municipio, clues });
+      
+      // Priorizar usuarios MUNICIPAL si el remitente es JURISDICCIONAL
+      if (USER?.rol === "JURISDICCIONAL") {
+        users.sort((a, b) => {
+          const isMunicipalA = (a.rol === "MUNICIPAL") ? 0 : 1;
+          const isMunicipalB = (b.rol === "MUNICIPAL") ? 0 : 1;
+          return isMunicipalA - isMunicipalB || a.usuario.localeCompare(b.usuario);
+        });
+      }
     } else if (scope === "CLUES") {
       users = getNotifUsersByFilters({ municipio, clues });
     } else if (scope === "MUNICIPIO") {
       users = getNotifUsersByFilters({ municipio });
+      
+      // Si es Jurisdiccional y alcance Municipio, solo mostrar usuarios MUNICIPAL
+      if (USER?.rol === "JURISDICCIONAL") {
+        users = users.filter(x => x.rol === "MUNICIPAL");
+      }
     } else if (scope === "ALL_MY_UNITS") {
       users = getNotifUsersByFilters({});
     }
@@ -1865,11 +1883,18 @@
     const cluesSel = $("notifTargetClues");
     const scopeSel = $("notifTargetScope");
 
-    // Restricción JURISDICCIONAL: No enviar a CLUES individuales
+    // Restricciones perfil JURISDICCIONAL
     if (USER?.rol === "JURISDICCIONAL" && scopeSel) {
+      // 1. Ocultar CLUES (unidades individuales)
       const optClues = scopeSel.querySelector('option[value="CLUES"]');
       if (optClues) optClues.style.display = "none";
-      if (scope === "CLUES") {
+      
+      // 2. Ocultar ALL_MY_UNITS (envío masivo a todas las unidades)
+      const optAll = scopeSel.querySelector('option[value="ALL_MY_UNITS"]');
+      if (optAll) optAll.style.display = "none";
+
+      // Redirigir si está en una opción no permitida
+      if (scope === "CLUES" || scope === "ALL_MY_UNITS") {
         scopeSel.value = "MUNICIPIO";
         return refreshNotifScopeUi();
       }
@@ -5533,6 +5558,12 @@
       const usuario = $("usuario").value.trim();
       const password = $("password").value.trim();
 
+      if (!usuario || !password) {
+        showToast("Por favor, ingresa usuario y contraseña", false, "warn");
+        hideOverlay();
+        return;
+      }
+
       const r = await apiCall({ action: "login", usuario, password });
 
       if (!r || !r.ok) {
@@ -5593,6 +5624,26 @@
       const covid_19 = $("covid_19") ? $("covid_19").value : "";
       const influenza = $("influenza") ? $("influenza").value : "";
       const vsr = $("vsr") ? $("vsr").value : "";
+
+      if (!nombre) {
+        showToast("Por favor, ingresa el nombre del responsable", false, "warn");
+        return;
+      }
+
+      // Validar que no haya valores negativos
+      const fields = [
+        "bcg", "hepatitis_b", "hexavalente", "dpt", "rotavirus",
+        "neumococica_13", "neumococica_20", "srp", "sr", "vph",
+        "varicela", "hepatitis_a", "td", "tdpa", "covid_19", "influenza", "vsr"
+      ];
+      for (const f of fields) {
+        const val = $(f)?.value;
+        if (val !== "" && Number(val) < 0) {
+          showToast(`El valor de ${f.toUpperCase()} no puede ser negativo`, false, "warn");
+          flashElement(f);
+          return;
+        }
+      }
 
       if (HAS_TODAY_SR && !EDIT_SR) {
         showToast("Ya existe una captura de hoy. Usa el botón Editar existencia de hoy.", false, "warn");
@@ -5704,6 +5755,22 @@
       const nombre = $("nombreCONS") ? $("nombreCONS").value.trim() : "";
       saveUxValue(UX_KEYS.consName, nombre);
       syncAguja();
+
+      if (!nombre) {
+        showToast("Por favor, ingresa el nombre del responsable", false, "warn");
+        return;
+      }
+
+      // Validar numéricos
+      const numFields = ["srp_dosis", "sr_dosis", "jeringa_reconst_5ml_0605500438", "jeringa_aplic_05ml_0605502657"];
+      for (const f of numFields) {
+        const val = $(f)?.value;
+        if (val !== "" && (isNaN(val) || Number(val) < 0)) {
+          showToast("Ingresa valores numéricos válidos (0 o más)", false, "warn");
+          flashElement(f);
+          return;
+        }
+      }
 
       if (HAS_TODAY_CONS && !EDIT_CONS) {
         showToast("Ya existe un reporte de hoy. Usa el botón Editar reporte de hoy.", false, "warn");
@@ -7118,6 +7185,12 @@
     widthBucket: null
   };
 
+  let MOBILE_HELPERS_CACHE = null;
+
+  function getAdaptiveWidthBucket() {
+    return window.innerWidth <= 820 ? "mobile" : "desktop";
+  }
+
   /**
    * ✅ MICRO-BENCHMARK: Mide la potencia real de cálculo (Math/Loop burst)
    * Ayuda a detectar equipos lentos sin depender solo de especificaciones.
@@ -7702,32 +7775,38 @@
    * Se ejecuta al cargar y se re-lanza cada 15 min.
    */
   async function initWeather() {
-    const hdr = $("hdrClima");
-    const bcl = $("bClima");
-    if (!hdr) return;
+    const hdr1 = $("hdrClima");
+    const hdr2 = $("hdrClima2");
+    if (!hdr1 && !hdr2) return;
 
     try {
-      hdr.textContent = "Obteniendo...";
+      if (hdr1) hdr1.textContent = "Obteniendo...";
+      if (hdr2) hdr2.textContent = "Obteniendo...";
+
       const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=20.5881&longitude=-100.3899&current=temperature_2m`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-
+      
       if (data && data.current) {
         const temp = Math.round(data.current.temperature_2m);
-        hdr.textContent = `Qro ${temp}°C`;
-        if (bcl) {
-          bcl.classList.remove("warn");
-          bcl.classList.add("good");
+        if (hdr1) hdr1.textContent = `Qro ${temp}°C`;
+        if (hdr2) hdr2.textContent = `${temp}°C`;
+
+        const bcl1 = $("bClima");
+        const bcl2 = $("bClima2");
+        if (bcl1) {
+          bcl1.classList.remove("warn");
+          bcl1.classList.add("good");
+        }
+        if (bcl2) {
+          bcl2.style.background = "var(--md-sys-color-secondary-container)";
+          bcl2.style.color = "var(--md-sys-color-on-secondary-container)";
         }
       }
     } catch (e) {
       console.warn("initWeather failed:", e);
-      // Fallback: Si falla la red, mostramos al menos un valor de referencia
-      hdr.textContent = "Qro 24°C";
-      if (bcl) {
-        bcl.classList.remove("warn");
-        bcl.classList.add("good");
-      }
+      if (hdr1) hdr1.textContent = "Qro 24°C";
+      if (hdr2) hdr2.textContent = "24°C";
     }
   }
 
