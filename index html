@@ -211,11 +211,14 @@
                     <h2 id="welcome">Hola</h2>
                     <div class="who" id="who"></div>
 
-                    <div class="statusbar" style="justify-content:flex-start;margin-top:10px">
+                    <div class="statusbar" style="justify-content:flex-start;margin-top:10px;gap:8px;flex-wrap:wrap;">
                       <span class="badge good"><span class="dot"></span><span id="rolTxt">Rol: —</span></span>
                       <span class="badge info"><span class="dot"></span><span id="munTxt">Municipio(s): —</span></span>
-                      <span class="badge warn" id="bCumplimiento"><span class="dot"></span><span
-                          id="dayTxt">—</span></span>
+                      <span class="badge warn" id="bCumplimiento"><span class="dot"></span><span id="dayTxt">—</span></span>
+                      <span class="badge" id="bClima2" style="background:var(--md-sys-color-surface-container); color:var(--md-sys-color-on-surface-variant);">
+                        <span class="material-symbols-rounded" style="font-size:18px">partly_cloudy_day</span>
+                        <span id="hdrClima2">—</span>
+                      </span>
                       <span class="badge secondary" id="bNotif" style="display:none">
                         <span class="dot"></span>
                         <span id="notifTxt">Actividad: 0</span>
@@ -226,19 +229,19 @@
 
                 <div class="tabs">
                   <button class="tab active" id="tabCAP">
-                    <span class="material-symbols-rounded">assignment</span>
+                    <div class="badge-wrapper">
+                      <span class="material-symbols-rounded">assignment</span>
+                      <span id="pinolBadgeMain" class="liveBadge pulse" style="display:none">0</span>
+                    </div>
                     <span id="tabCAPText">Captura</span>
-                    <span id="pinolBadgeMain" class="liveBadge" style="display:none; margin-left:8px;">
-                      0
-                    </span>
                   </button>
 
                   <button class="tab" id="tabNOTIFS" style="display:none">
-                    <span class="material-symbols-rounded">notifications</span>
-                    <span>Centro de Notificaciones</span>
-                    <span id="notifBadgeMain" class="liveBadge" style="display:none; margin-left:8px;">
-                      0
-                    </span>
+                    <div class="badge-wrapper">
+                      <span class="material-symbols-rounded">notifications</span>
+                      <span id="notifBadgeMain" class="liveBadge pulse" style="display:none">0</span>
+                    </div>
+                    <span>Notificaciones</span>
                   </button>
 
                   <button class="tab" id="tabADMIN" style="display:none">
