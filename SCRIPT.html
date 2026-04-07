@@ -941,6 +941,14 @@
           only_unread: ONLY_UNREAD_NOTIFS ? "SI" : "NO"
         });
 
+        if (!res || !res.ok) {
+          if (String(res?.error || "").includes("Sesión inválida")) {
+             performLogout("Sesión expirada.");
+             return null;
+          }
+          throw new Error(res?.error || "Error al cargar notificaciones");
+        }
+
         const data = res.data || {};
         const items = Array.isArray(data.items) ? data.items : [];
         const unread = Number(data.unread || 0);
@@ -2601,6 +2609,79 @@
     getNotifications: function () { return [...this._state.notifications]; }
   };
 
+  /**
+   * 📝 Drafting system: Autosave/Recovery for forms
+   */
+  const Drafting = {
+    _getDraftKey(formId) {
+      const userKey = USER ? normalize_(USER.usuario) : "anon";
+      return `draft_${userKey}_${formId}`;
+    },
+    save(formId) {
+      const container = $(formId);
+      if (!container) return;
+      const data = {};
+      const inputs = container.querySelectorAll("input, select, textarea");
+      inputs.forEach(el => {
+        if (el.id && !el.disabled && el.type !== "button" && el.type !== "submit") {
+          data[el.id] = el.value;
+        }
+      });
+      if (Object.keys(data).length > 0) {
+        sessionStorage.setItem(this._getDraftKey(formId), JSON.stringify(data));
+      }
+    },
+    load(formId) {
+      const raw = sessionStorage.getItem(this._getDraftKey(formId));
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw);
+      } catch (e) {
+        return null;
+      }
+    },
+    apply(formId) {
+      const data = this.load(formId);
+      if (!data) return;
+      Object.keys(data).forEach(id => {
+        const el = $(id);
+        if (el) {
+          el.value = data[id];
+          el.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      });
+      showToast("Datos recuperados del borrador", "good");
+    },
+    clear(formId) {
+      sessionStorage.removeItem(this._getDraftKey(formId));
+    },
+    setupListeners() {
+      ["formSR", "formCONS", "formPINOL"].forEach(formId => {
+        const container = $(formId);
+        if (!container) return;
+        container.addEventListener("input", debounce(() => {
+          this.save(formId);
+        }, 1000));
+      });
+    },
+    checkAndNotify() {
+      const drafts = ["formSR", "formCONS", "formPINOL"].filter(id => !!this.load(id));
+      if (drafts.length > 0) {
+        showToast("Se encontraron datos no guardados. ¿Deseas recuperarlos?", {
+          key: "RECOVER_DRAFT",
+          type: "info",
+          duration: 15000,
+          action: {
+            label: "Recuperar",
+            callback: () => {
+              drafts.forEach(id => this.apply(id));
+            }
+          }
+        });
+      }
+    }
+  };
+
   // NUEVO WRAPPER UI (Ejecutor Asíncrono Centralizado)
   async function executeAction(actionName, payload, loadingMsg, successMsg = null) {
     try {
@@ -2610,17 +2691,38 @@
       const res = await apiCall(actionName, payload);
 
       if (!res || !res.ok) {
-        throw new Error((res && res.error) || "Error desconocido en el servidor.");
+        const errMsg = (res && res.error) || "Error desconocido en el servidor.";
+        
+        // HEARTBEAT: Si el servidor reporta sesión inválida, forzamos salida
+        if (errMsg.includes("Sesión inválida")) {
+          performLogout("Tu sesión ha expirado. Por seguridad, inicia sesión de nuevo.");
+          return;
+        }
+
+        throw new Error(errMsg);
       }
 
       if (successMsg) showToast(successMsg, "good");
       return res.data;
     } catch (error) {
-      showToast(error.message, "bad");
+      if (!error.message.includes("Sesión inválida")) {
+        showToast(error.message, "bad");
+      }
       throw error;
     } finally {
       if (loadingMsg) hideOverlay();
     }
+  }
+
+  /**
+   * 🔒 Heartbeat Logout: Limpia la sesión y redirige al login
+   */
+  function performLogout(message = "Sesión cerrada") {
+    stopNotificationsAutoRefresh();
+    clearSessionCaches();
+    resetOpsPrewarmFlags();
+    setLoggedOutUI();
+    showToast(message, "info");
   }
 
   function apiCall(actionOrPayload, payload = {}) {
@@ -3089,11 +3191,7 @@
     $("tabPINOL")?.addEventListener("click", () => activateCapture("PINOL"));
 
     $("btnLogout")?.addEventListener("click", () => {
-      stopNotificationsAutoRefresh();
-      clearSessionCaches();
-      resetOpsPrewarmFlags();
-      setLoggedOutUI();
-      showToast("Sesión cerrada");
+      performLogout("Sesión cerrada");
     });
   }
   function bindSummaryUiEvents() {
@@ -5713,6 +5811,7 @@
 
       flashElement("formSR");
       setSavedStamp();
+      Drafting.clear("formSR");
 
       await refreshAfterMutation({
         touchToday: true,
@@ -5821,6 +5920,7 @@
       );
       flashElement("formCONS");
       setSavedStamp();
+      Drafting.clear("formCONS");
 
       await refreshAfterMutation({
         touchToday: true,
@@ -6029,6 +6129,7 @@
       showToast("Solicitud de pinol guardada");
       pushLiveEvent("Pinol", "Tu solicitud fue enviada correctamente.", "good");
       flashElement("formPINOL");
+      Drafting.clear("formPINOL");
       setSavedStamp();
 
       $("nombrePINOL").value = "";
@@ -7766,6 +7867,10 @@
         console.warn("realtime loadNotifications error:", err);
       });
     }, 45000));
+
+    // Initialize drafting
+    Drafting.setupListeners();
+    setTimeout(() => Drafting.checkAndNotify(), 2000);
   }
 
   /**
