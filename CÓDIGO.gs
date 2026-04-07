@@ -137,6 +137,47 @@ function withLock_(fn) {
   };
 }
 
+/** 
+ * Bloqueo inteligente por CLUES usando CacheService. 
+ * Evita que una unidad bloquee a la aplicación completa.
+ */
+function withUnitLock_(fn) {
+  return function(req) {
+    try {
+      const u = authOrThrow_(req?.token);
+      const clues = normalizeClues_(u.clues || "GLOBAL");
+      const lockKey = "LOCK_UNIT_" + clues;
+      const cache = CacheService.getScriptCache();
+      
+      let lockSet = false;
+      const waitTime = 12000;
+      const startTime = Date.now();
+      
+      while (Date.now() - startTime < waitTime) {
+        const existing = cache.get(lockKey);
+        if (!existing) {
+          cache.put(lockKey, "1", 20); // Bloqueo por 20 segundos
+          lockSet = true;
+          break;
+        }
+        Utilities.sleep(1000); // Reintentar cada segundo
+      }
+      
+      if (!lockSet) {
+        return { ok: false, error: "Tu unidad ya tiene una operación de guardado en curso. Por favor espera unos segundos." };
+      }
+      
+      try {
+        return fn(req);
+      } finally {
+        cache.remove(lockKey);
+      }
+    } catch (e) {
+      return { ok: false, error: String(e.message || e) };
+    }
+  };
+}
+
 function api(req) {
   const action = String(req?.action || "").trim();
 
@@ -145,8 +186,8 @@ function api(req) {
     case "whoami": return api_whoami(req);
     case "unitStatus": return api_unitStatus(req);
 
-    case "saveSR": return withLock_(api_saveSR)(req);
-    case "saveConsumibles": return withLock_(api_saveConsumibles)(req);
+    case "saveSR": return withUnitLock_(api_saveSR)(req);
+    case "saveConsumibles": return withUnitLock_(api_saveConsumibles)(req);
 
     case "getTodayReports": return api_getTodayReports(req);
     case "updateSR": return api_updateSR(req);
@@ -158,7 +199,7 @@ function api(req) {
     case "adminSetConsumiblesOverride": return api_adminSetConsumiblesOverride(req);
 
     case "bioGetForm": return api_bioGetForm(req);
-    case "saveBio": return withLock_(api_saveBio)(req);
+    case "saveBio": return withUnitLock_(api_saveBio)(req);
     case "bioExportMatrix": return api_bioExportMatrix(req);
     case "bioGetDatesForMonth": return api_bioGetDatesForMonth(req);
 
@@ -169,7 +210,7 @@ function api(req) {
     case "adminResetPassword": return api_adminResetPassword(req);
     case "adminSetActive": return api_adminSetActive(req);
 
-    case "savePinol": return withLock_(api_savePinol)(req);
+    case "savePinol": return withUnitLock_(api_savePinol)(req);
     case "listPinol": return api_listPinol(req);
     case "markPinolDelivered": return api_markPinolDelivered(req);
     case "sendNotification": return api_sendNotification(req);
@@ -312,6 +353,39 @@ function getOrCreateSubFolder_(parentFolder, folderName) {
     return folders.next();
   }
   return parentFolder.createFolder(folderName);
+}
+
+/** 
+ * Guarda un blob en una carpeta temporal de Drive y devuelve la URL de descarga.
+ * Configura el archivo para que sea accesible por cualquier persona con el enlace.
+ */
+function saveToTempDrive_(blob, filename) {
+  try {
+    const rootId = DRIVE_ROOT_FOLDER_ID;
+    const root = DriveApp.getFolderById(rootId);
+    const folder = getOrCreateSubFolder_(root, "REPORTES_TEMPORALES");
+    
+    // Eliminar archivos muy viejos (más de 2 días) para limpieza automática
+    const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+    const oldFiles = folder.getFiles();
+    while (oldFiles.hasNext()) {
+      const f = oldFiles.next();
+      if (f.getDateCreated() < twoDaysAgo) {
+        f.setTrashed(true);
+      }
+    }
+
+    const file = folder.createFile(blob);
+    file.setName(filename);
+    
+    // Configuración solicitada: Cualquier persona con el enlace puede ver/descargar
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    
+    return file.getDownloadUrl();
+  } catch (e) {
+    Logger.log("Error en saveToTempDrive_: " + e.message);
+    throw new Error("No se pudo guardar el archivo en Drive para su descarga: " + e.message);
+  }
 }
 
 
@@ -4144,13 +4218,13 @@ function api_bioExportMatrix(payload) {
 
     if (separarPorMunicipio && u.rol === "ADMIN") {
       const outZip = buildBioExportZipByMunicipio_(u, fechaPedido, municipios);
-      const b64Zip = Utilities.base64Encode(outZip.blob.getBytes());
+      const downloadUrl = saveToTempDrive_(outZip.blob, outZip.filename);
 
       return {
         ok:true,
         data:{
           filename: outZip.filename,
-          b64: b64Zip,
+          downloadUrl,
           mimeType: "application/zip",
           fechaPedido
         }
@@ -4158,13 +4232,13 @@ function api_bioExportMatrix(payload) {
     }
 
     const out = buildBioExportXlsx_(u, fechaPedido, municipios);
-    const b64 = Utilities.base64Encode(out.blob.getBytes());
+    const downloadUrl = saveToTempDrive_(out.blob, out.filename);
 
     return {
       ok:true,
       data:{
         filename: out.filename,
-        b64,
+        downloadUrl,
         mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         fechaPedido
       }
@@ -4324,13 +4398,13 @@ function api_export(payload) {
 
       if (separarPorMunicipio && u.rol === "ADMIN") {
         const outZip = buildConsExportZipByMunicipio_(u, fechaInicio, fechaFin, municipios);
-        const b64Zip = Utilities.base64Encode(outZip.blob.getBytes());
+        const downloadUrl = saveToTempDrive_(outZip.blob, outZip.filename);
 
         return {
           ok:true,
           data:{
             filename: outZip.filename,
-            b64: b64Zip,
+            downloadUrl,
             mimeType: "application/zip",
             tipo,
             fechaInicio,
@@ -4340,13 +4414,13 @@ function api_export(payload) {
       }
 
       const out = buildConsExportXlsx_(u, fechaInicio, fechaFin, municipios);
-      const b64 = Utilities.base64Encode(out.blob.getBytes());
+      const downloadUrl = saveToTempDrive_(out.blob, out.filename);
 
       return {
         ok:true,
         data:{
           filename: out.filename,
-          b64,
+          downloadUrl,
           mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
           tipo,
           fechaInicio,
@@ -4364,13 +4438,13 @@ function api_export(payload) {
 
     if (separarPorMunicipio && u.rol === "ADMIN") {
       const outZip = buildSRExportZipByMunicipio_(u, tipo, fechaInicio, fechaFin, municipios);
-      const b64Zip = Utilities.base64Encode(outZip.blob.getBytes());
+      const downloadUrl = saveToTempDrive_(outZip.blob, outZip.filename);
 
       return {
         ok:true,
         data:{
           filename: outZip.filename,
-          b64: b64Zip,
+          downloadUrl,
           mimeType: "application/zip",
           tipo,
           fechaInicio,
@@ -4389,15 +4463,14 @@ function api_export(payload) {
     const filename = `${tipo === "SR" ? "EXISTENCIA_BIOLOGICOS" : "CONSUMIBLES"}_${fechaInicio}${fechaFin !== fechaInicio ? "_a_" + fechaFin : ""}_${tagMunicipios}.csv`;
 
     const csvUtf8 = "\uFEFF" + csv;
-    const b64 = Utilities.base64Encode(
-      Utilities.newBlob(csvUtf8, "text/csv;charset=utf-8", filename).getBytes()
-    );
+    const blob = Utilities.newBlob(csvUtf8, "text/csv;charset=utf-8", filename);
+    const downloadUrl = saveToTempDrive_(blob, filename);
 
     return {
       ok:true,
       data:{
         filename,
-        b64,
+        downloadUrl,
         tipo,
         fechaInicio,
         fechaFin,
