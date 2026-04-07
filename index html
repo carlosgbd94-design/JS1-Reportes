@@ -11,6 +11,7 @@
   <title>Reportes y existencias Jurisdicción Sanitaria 1</title>
 
   <?!= include('CSS'); ?>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
 
 </head>
 
@@ -741,6 +742,25 @@
                   <div class="kpiCard warn" id="kpiCardFaltantes">
                     <div class="kpiCardLabel">Faltantes</div>
                     <div class="kpiCardValue" id="sumFaltantes">0</div>
+                  </div>
+                </div>
+
+                <!-- ✅ NUEVO DASHBOARD EJECUTIVO VISUAL -->
+                <div class="adminDashboardGrid">
+                  <!-- Cumplimiento Card -->
+                  <div class="card kpiCard dashboardCard">
+                    <h4 class="dashboardCardTitle">Cumplimiento Operativo</h4>
+                    <div class="chartWrapper doughnutWrapper">
+                      <canvas id="chartCompliance"></canvas>
+                      <div id="compliancePctVal" class="chartCenterValue">0%</div>
+                    </div>
+                  </div>
+                  <!-- Capturas Card -->
+                  <div class="card kpiCard dashboardCard">
+                    <h4 class="dashboardCardTitle">Estado de Capturas</h4>
+                    <div class="chartWrapper barWrapper">
+                      <canvas id="chartCapturas"></canvas>
+                    </div>
                   </div>
                 </div>
 
