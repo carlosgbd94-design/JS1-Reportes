@@ -59,10 +59,12 @@
     --md-outline: #74777f;
     --md-outline-variant: #c4c6cf;
 
-    /* Shadows: M3 Realistic Shadows for light theme */
-    --md-shadow-1: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-    --md-shadow-2: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-    --md-shadow-3: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    /* 🎨 MD3 ELEVATION SYSTEM (Standard M3 Shadows) */
+    --md-shadow-1: 0 1px 2px 0 rgba(0, 0, 0, 0.3), 0 1px 3px 1px rgba(0, 0, 0, 0.15);
+    --md-shadow-2: 0 1px 2px 0 rgba(0, 0, 0, 0.3), 0 2px 6px 2px rgba(0, 0, 0, 0.15);
+    --md-shadow-3: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 4px 8px 3px rgba(0, 0, 0, 0.15);
+    --md-shadow-4: 0 2px 3px 0 rgba(0, 0, 0, 0.3), 0 6px 10px 4px rgba(0, 0, 0, 0.15);
+    --md-shadow-5: 0 4px 4px 0 rgba(0, 0, 0, 0.3), 0 8px 12px 6px rgba(0, 0, 0, 0.15);
 
     /* 🎨 MD3 TONAL PALETTES FOR ALERTS (M3 Standard) */
     --md-sys-color-success-container: #d1e9d2;
@@ -73,6 +75,10 @@
     --md-sys-color-on-error-container: #410002;
     --md-sys-color-info-container: #d6e3ff;
     --md-sys-color-on-info-container: #001b3e;
+
+    /* Tonal Palette Extensions for Material You */
+    --md-sys-color-secondary-tonal: #e0f2f1;
+    --md-sys-color-on-secondary-tonal: #002020;
   }
 
   * {
@@ -379,6 +385,14 @@
     border-color: rgba(0, 0, 0, 0.05);
   }
 
+  #bFecha .material-symbols-rounded {
+    color: #1B6D4F; /* Darker Green */
+  }
+
+  #bHora .material-symbols-rounded {
+    color: #004d80; /* Darker Blue */
+  }
+
   .badge.weather-badge {
     background: #E0F2F1; /* Soft Cyan container */
     color: #004D40; /* Dark Teal text */
@@ -386,7 +400,7 @@
   }
 
   .badge.weather-badge .material-symbols-rounded {
-    color: #00796B;
+    color: #00796B; /* Teal Icon */
   }
 
   #bFecha {
@@ -490,11 +504,10 @@
     width: min(420px, 100%);
     margin: 0;
     border-radius: 28px;
-    /* MD3 Premium */
     background: var(--md-surface-container);
     border: 1px solid var(--md-outline-variant);
-    padding: 32px 24px;
-    box-shadow: 0 12px 64px rgba(0, 0, 0, 0.12);
+    padding: 32px;
+    box-shadow: var(--md-shadow-3);
   }
 
   /* ✅ GRID (contenedor general) */
@@ -518,7 +531,7 @@
     border-radius: 20px;
     background: var(--md-surface-container);
     padding: 16px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--md-shadow-1);
     min-width: 0;
     position: relative;
     transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
@@ -676,11 +689,10 @@
 
   #btnLogin {
     margin-top: 32px;
-    /* Incrementada separación por solicitud */
     width: 100%;
     background: linear-gradient(135deg, #001B3D 0%, #003366 100%);
     color: #ffffff;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--md-shadow-2);
   }
 
   .modalFooter .btn {
@@ -698,9 +710,30 @@
     filter: brightness(1.1);
   }
 
+  /* MD3 Tonal Button */
+  .btn-tonal {
+    background: var(--md-sys-color-secondary-tonal);
+    color: var(--md-sys-color-on-secondary-tonal);
+    font-weight: 700;
+    padding: 10px 24px;
+    border-radius: 100px;
+    transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+
+  .btn-tonal:hover {
+    background: #c7e0de; /* Slightly deeper tonal */
+    box-shadow: var(--md-shadow-1);
+  }
+
   #btnLogin:hover {
-    transform: translateX(4px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    transform: translateY(-1px);
+    box-shadow: var(--md-shadow-3);
   }
 
   input[type="date"] {
@@ -887,6 +920,7 @@
   .sideTitle h3 {
     font-size: 15px;
     font-weight: 800;
+    color: var(--md-sys-color-primary);
   }
 
   .tab {
@@ -1516,11 +1550,10 @@
 
   .sectionTitle h3 {
     margin: 0;
-    font-size: 14px;
-    color: var(--md-sys-color-primary);
-    /* Azul Grafito Institucional */
+    font-size: 18px;
     font-weight: 800;
-    letter-spacing: -.02em;
+    color: var(--md-sys-color-primary);
+    letter-spacing: -0.02em;
   }
 
   .gridRight {
@@ -5309,7 +5342,7 @@
     background: rgba(255, 255, 255, 0.98);
     border: 1px solid rgba(0, 0, 0, 0.08);
     border-radius: 28px;
-    box-shadow: 0 30px 90px rgba(0, 0, 0, 0.22);
+    box-shadow: var(--md-shadow-4);
     overflow: hidden;
   }
 
@@ -6428,7 +6461,7 @@
     -webkit-backdrop-filter: none !important;
     box-shadow: none !important;
     border: 1px solid var(--md-outline-variant) !important;
-    background: var(--md-surface-container-low) !important;
+    background: #ffffff !important; /* Force pure white for high contrast/perf */
     color: var(--md-sys-color-on-surface) !important;
   }
 
@@ -6986,17 +7019,16 @@
   }
 
   @media (prefers-reduced-transparency: reduce) {
-
+    /* Accessibility: Strip transparency but maintain surface colors */
     .card,
     .sideCard,
     .top,
-    .badge,
     .fact,
     .topNotifCard,
     .notifHero {
       backdrop-filter: none !important;
       -webkit-backdrop-filter: none !important;
-      background: rgba(15, 27, 51, .94) !important;
+      background: #ffffff !important;
     }
   }
 
