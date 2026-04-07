@@ -44,7 +44,7 @@
               <span id="hdrHora">Hora: —</span>
             </span>
 
-            <span class="badge warn" id="bClima">
+            <span class="badge weather-badge" id="bClima">
               <span class="material-symbols-rounded">partly_cloudy_day</span>
               <span id="hdrClima">—</span>
             </span>
@@ -117,9 +117,11 @@
               </button>
 
               <button class="iconbtn" id="btnTopNotifications" type="button" style="display:none">
-                <span class="material-symbols-rounded">notifications</span>
+                <div class="badge-wrapper">
+                  <span class="material-symbols-rounded">notifications</span>
+                  <span id="topNotifBadge" class="liveBadge" style="display:none">0</span>
+                </div>
                 Notificaciones
-                <span id="topNotifBadge" class="liveBadge" style="display:none; margin-left:8px;">0</span>
               </button>
             </div>
 
@@ -214,11 +216,8 @@
                     <div class="statusbar" style="justify-content:flex-start;margin-top:10px;gap:8px;flex-wrap:wrap;">
                       <span class="badge good"><span class="dot"></span><span id="rolTxt">Rol: —</span></span>
                       <span class="badge info"><span class="dot"></span><span id="munTxt">Municipio(s): —</span></span>
-                      <span class="badge warn" id="bCumplimiento"><span class="dot"></span><span id="dayTxt">—</span></span>
-                      <span class="badge" id="bClima2" style="background:var(--md-sys-color-surface-container); color:var(--md-sys-color-on-surface-variant);">
-                        <span class="material-symbols-rounded" style="font-size:18px">partly_cloudy_day</span>
-                        <span id="hdrClima2">—</span>
-                      </span>
+                      <span class="badge warn" id="bCumplimiento"><span class="dot"></span><span
+                          id="dayTxt">—</span></span>
                       <span class="badge secondary" id="bNotif" style="display:none">
                         <span class="dot"></span>
                         <span id="notifTxt">Actividad: 0</span>
@@ -575,9 +574,11 @@
                     <span>Métricas históricas</span>
                   </button>
                   <button class="tab" id="tabOPS_PINOL">
-                    <span class="material-symbols-rounded">inventory</span>
+                    <div class="badge-wrapper">
+                      <span class="material-symbols-rounded">inventory</span>
+                      <span id="pinolBadgeTab" class="liveBadge" style="display:none">0</span>
+                    </div>
                     <span>Solicitudes de pinol</span>
-                    <span id="pinolBadgeTab" class="liveBadge" style="display:none; margin-left:8px;">0</span>
                   </button>
                 </div>
               </div>
@@ -1173,49 +1174,92 @@
         </div>
       </div>
 
+      <!-- ✅ MODAL ENTREGA DE PINOL MD3 -->
       <div class="pinolModal" id="pinolEntregaModal">
-        <div class="pinolModalCard">
-          <div class="pinolModalHead">
-            <div class="pinolModalTitle">
-              <span class="material-symbols-rounded">inventory_2</span>
-              Confirmar entrega de pinol
+        <div class="modalGlass" style="max-width:600px; border-radius:28px;">
+          <div class="modalHead">
+            <div class="modalEyebrow" style="
+              background: #dcfce7;
+              color: #166534;
+              padding: 6px 14px;
+              border-radius: 12px;
+              display: inline-flex;
+              align-items: center;
+              gap: 8px;
+              font-weight: 800;
+              font-size: 11px;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+              margin-bottom: 12px;
+            ">
+              <span class="material-symbols-rounded" style="font-size:18px;">inventory_2</span>
+              Gestión de Insumos
             </div>
-            <div class="pinolModalSub">
-              Puedes agregar un comentario opcional para la unidad antes de enviar la notificación de entrega.
+            <div class="modalTitle" style="font-weight:900; margin-bottom:8px;">Confirmar entrega de pinol</div>
+            <div class="modalSub" style="color:var(--md-sys-color-on-surface-variant); line-height:1.5;">
+              Ingresa un comentario opcional para la unidad antes de notificar la entrega oficial del insumo.
             </div>
           </div>
 
-          <div class="pinolModalBody">
-            <div class="pinolModalMeta">
-              <div class="pinolMetaCard">
-                <div class="pinolMetaLabel">Municipio</div>
-                <div class="pinolMetaValue" id="pinolEntregaMetaMunicipio">—</div>
+          <div class="modalBody" style="padding-top:20px;">
+            <div class="pinolModalMeta" style="
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+              gap: 12px;
+              margin-bottom: 24px;
+            ">
+              <div class="fieldCard" style="background: var(--md-surface-container-low); border: 1px solid var(--md-outline-variant); padding: 12px;">
+                <label style="margin:0 0 4px; font-size:10px; color:var(--md-sys-color-primary);">MUNICIPIO</label>
+                <div id="pinolEntregaMetaMunicipio" style="font-weight:900; font-size:14px; color:var(--md-sys-color-on-surface);">—</div>
               </div>
-              <div class="pinolMetaCard">
-                <div class="pinolMetaLabel">CLUES</div>
-                <div class="pinolMetaValue" id="pinolEntregaMetaClues">—</div>
+              <div class="fieldCard" style="background: var(--md-surface-container-low); border: 1px solid var(--md-outline-variant); padding: 12px;">
+                <label style="margin:0 0 4px; font-size:10px; color:var(--md-sys-color-primary);">CLUES</label>
+                <div id="pinolEntregaMetaClues" style="font-weight:900; font-size:14px; color:var(--md-sys-color-on-surface);">—</div>
               </div>
-              <div class="pinolMetaCard">
-                <div class="pinolMetaLabel">Unidad</div>
-                <div class="pinolMetaValue" id="pinolEntregaMetaUnidad">—</div>
+              <div class="fieldCard" style="background: var(--md-surface-container-low); border: 1px solid var(--md-outline-variant); padding: 12px;">
+                <label style="margin:0 0 4px; font-size:10px; color:var(--md-sys-color-primary);">UNIDAD</label>
+                <div id="pinolEntregaMetaUnidad" style="font-weight:900; font-size:14px; color:var(--md-sys-color-on-surface);">—</div>
               </div>
             </div>
 
-            <label for="pinolEntregaComentario">Comentario para la unidad (opcional)</label>
-            <textarea id="pinolEntregaComentario"
-              placeholder="Ejemplo: Se realizó la entrega completa en la unidad. Favor de validar recepción física y resguardo."></textarea>
-
-            <div class="pinolModalHint">
-              Este comentario se incluirá dentro de la notificación enviada a la unidad.
+            <div class="fieldCard" style="background:transparent; border:none; padding:0;">
+              <label style="color:var(--md-sys-color-primary); font-weight:800; font-size:12px; margin-bottom:10px; display:block;">
+                COMENTARIO PARA LA UNIDAD (OPCIONAL)
+              </label>
+              <textarea id="pinolEntregaComentario" placeholder="Ej: Se entregó material completo. Favor de resguardar." style="
+                min-height: 100px;
+                background: var(--md-surface-container-highest);
+                border: 1px solid var(--md-outline-variant);
+                border-radius: 16px;
+                padding: 14px;
+                font-size: 15px;
+                width: 100%;
+                resize: none;
+              "></textarea>
             </div>
 
-            <div class="pinolModalActions">
-              <button class="ghostBtn pinolCancelBtn" id="btnCancelarEntregaPinol" type="button">
-                <span class="material-symbols-rounded">close</span>
-                Cancelar
+            <div class="modalNote" style="font-size:12px; color:var(--md-sys-color-secondary); margin-top:16px; background:var(--md-surface-container-low); padding:10px; border-radius:12px; border-left:4px solid #166534;">
+              Este mensaje se enviará como notificación inmediata a la unidad seleccionada.
+            </div>
+
+            <div class="modalFooter" style="margin-top:32px; display:flex; justify-content:flex-end; gap:12px;">
+              <button class="ghostBtn" id="btnCancelarEntregaPinol" type="button" style="font-weight:700; border:none; background:transparent;">
+                <span class="material-symbols-rounded">close</span> Cancelar
               </button>
 
-              <button class="pinolConfirmBtn" id="btnConfirmarEntregaPinol" type="button">
+              <button class="btn" id="btnConfirmarEntregaPinol" type="button" style="
+                background: linear-gradient(135deg, #166534 0%, #15803d 100%);
+                color: #ffffff;
+                padding: 12px 28px;
+                border: none;
+                border-radius: 14px;
+                font-weight: 800;
+                box-shadow: 0 4px 12px rgba(22, 101, 52, 0.25);
+                display: flex;
+                align-items: center;
+                gap: 8px;
+              ">
+                <span class="material-symbols-rounded">check_circle</span>
                 Confirmar entrega y notificar
               </button>
             </div>
