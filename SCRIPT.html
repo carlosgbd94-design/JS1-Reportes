@@ -1825,7 +1825,7 @@
 
     if (scope === "USUARIO") {
       users = getNotifUsersByFilters({ municipio, clues });
-      
+
       // Priorizar usuarios MUNICIPAL si el remitente es JURISDICCIONAL
       if (USER?.rol === "JURISDICCIONAL") {
         users.sort((a, b) => {
@@ -1838,7 +1838,7 @@
       users = getNotifUsersByFilters({ municipio, clues });
     } else if (scope === "MUNICIPIO") {
       users = getNotifUsersByFilters({ municipio });
-      
+
       // Si es Jurisdiccional y alcance Municipio, solo mostrar usuarios MUNICIPAL
       if (USER?.rol === "JURISDICCIONAL") {
         users = users.filter(x => x.rol === "MUNICIPAL");
@@ -1888,7 +1888,7 @@
       // 1. Ocultar CLUES (unidades individuales)
       const optClues = scopeSel.querySelector('option[value="CLUES"]');
       if (optClues) optClues.style.display = "none";
-      
+
       // 2. Ocultar ALL_MY_UNITS (envío masivo a todas las unidades)
       const optAll = scopeSel.querySelector('option[value="ALL_MY_UNITS"]');
       if (optAll) optAll.style.display = "none";
@@ -2478,6 +2478,7 @@
     }
 
     showOverlay("Estamos actualizando tu contraseña y guardando tu correo…", "Actualizando seguridad");
+    closePasswordModal();
 
     try {
       const r = await apiCall({
@@ -2510,9 +2511,6 @@
       if (USER) {
         USER.email = email;
       }
-
-      const ov = $("passwordOverlay");
-      if (ov) ov.classList.remove("show");
 
       showToast("Contraseña y correo guardados correctamente");
     } catch (e) {
@@ -6087,6 +6085,7 @@
 
 
   if ($("btnDoExport")) $("btnDoExport").onclick = async () => {
+    $("exportOverlay")?.classList.remove("show");
     showOverlay("Generando reporte...");
     try {
       const municipios = getSelectedExportMunicipios();
@@ -6134,7 +6133,6 @@
       link.click();
 
       showToast("El archivo se exportó correctamente");
-      $("exportOverlay")?.classList.remove("show");
 
     } catch (e) {
       showToast("Error al exportar", false);
@@ -7786,7 +7784,7 @@
       const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=20.5881&longitude=-100.3899&current=temperature_2m`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      
+
       if (data && data.current) {
         const temp = Math.round(data.current.temperature_2m);
         if (hdr1) hdr1.textContent = `Qro ${temp}°C`;
@@ -8026,11 +8024,12 @@
       };
 
       try {
+        closeUploadFilesModal();
+        showOverlay("Subiendo archivo a Drive...", "Drive");
         setBtnBusy("btnDoUpload", true, "Subiendo…");
         const res = await apiCall(payload);
         if (res && res.ok) {
           showToast("¡Archivo subido exitosamente a Drive!", true);
-          closeUploadFilesModal();
         } else {
           showToast("Error al subir: " + (res?.error || "Desconocido"), false);
         }
