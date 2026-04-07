@@ -102,6 +102,14 @@
     void toast.offsetWidth;
     toast.classList.add("show");
 
+    // Añade esto antes de LIVE_STATE.toastMeta.key = toastKey;
+
+    if (toast.classList.contains("show")) {
+      toast.classList.remove("show");
+      void toast.offsetWidth; // Reflow forzado
+    }
+
+
     if (TOAST_TIMER) clearTimeout(TOAST_TIMER);
     TOAST_TIMER = setTimeout(() => {
       toast.classList.remove("show");
@@ -120,6 +128,7 @@
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/\s+/g, " ");
   }
+  const normalize_ = normalizeTextKey_;
 
   function fixUtf8Text_(v) {
     let s = String(v ?? "");
@@ -941,8 +950,8 @@
 
         if (!res || !res.ok) {
           if (String(res?.error || "").includes("Sesión inválida")) {
-             performLogout("Sesión expirada.");
-             return null;
+            performLogout("Sesión expirada.");
+            return null;
           }
           throw new Error(res?.error || "Error al cargar notificaciones");
         }
@@ -1564,6 +1573,16 @@
         if (key) toggleNotifGroup(key);
         return; // IMPORTANTE: No seguir al cierre por "clic fuera" ya que el DOM cambió
       }
+
+      window.addEventListener('offline', () => {
+        showToast("Sin conexión a internet. Espera a recuperar la señal.", false, "bad", { force: true });
+        document.body.classList.add("lowperf"); // Opcional: apaga animaciones para ahorrar batería
+      });
+
+      window.addEventListener('online', () => {
+        showToast("Conexión recuperada.", true, "good");
+        document.body.classList.remove("lowperf");
+      });
 
       // Close dropdown on outside click
       const refs = getTopNotifDropdownRefs();
@@ -2629,7 +2648,7 @@
           data[el.id] = el.value;
         }
       });
-      
+
       const hasValue = Object.values(data).some(v => String(v).trim() !== "");
       if (hasValue) {
         localStorage.setItem(this._getDraftKey(formId), JSON.stringify(data));
@@ -2648,7 +2667,7 @@
     apply(formId) {
       const data = this.load(formId);
       if (!data) return false;
-      
+
       Object.keys(data).forEach(id => {
         const el = $(id);
         if (el) {
@@ -2664,6 +2683,16 @@
     clear(formId) {
       localStorage.removeItem(this._getDraftKey(formId));
       console.log(`🧹 Borrador ${formId} eliminado`);
+    },
+    checkAndNotify() {
+      ["formSR", "formCONS", "formPINOL"].forEach(fid => {
+        const data = this.load(fid);
+        if (data) {
+          const name = fid === "formSR" ? "Existencia" : fid === "formCONS" ? "Consumibles" : "Pinol";
+          showToast(`Borrador de ${name} recuperado`, true, "info");
+          this.apply(fid);
+        }
+      });
     },
     setupListeners() {
       ["formSR", "formCONS", "formPINOL"].forEach(formId => {
@@ -2687,7 +2716,7 @@
 
       if (!res || !res.ok) {
         const errMsg = (res && res.error) || "Error desconocido en el servidor.";
-        
+
         // HEARTBEAT: Si el servidor reporta sesión inválida, forzamos salida
         if (errMsg.includes("Sesión inválida")) {
           performLogout("Tu sesión ha expirado. Por seguridad, inicia sesión de nuevo.");
@@ -3903,11 +3932,14 @@
   }
 
   function getLastThursdayLocal(baseYmd) {
-
     const override = getConsumiblesCaptureDate();
     if (override) return override;
 
-    const d = baseYmd ? new Date(baseYmd + "T00:00:00") : new Date();
+    let d = new Date();
+    if (baseYmd) {
+      const [y, m, day] = baseYmd.split('-');
+      d = new Date(y, m - 1, day, 0, 0, 0);
+    }
 
     while (d.getDay() !== 4) {
       d.setDate(d.getDate() - 1);
@@ -3934,7 +3966,8 @@
   }
 
   function getConsumiblesOperationalRangeClient(base) {
-    const d = new Date(base + "T00:00:00");
+    const [y, m, day] = base.split('-');
+    const d = new Date(y, m - 1, day, 0, 0, 0);
     const dow = d.getDay();
 
     if (dow === 3) {
@@ -5147,7 +5180,88 @@
       `).join("");
       }
     }
+
+    // ✅ Actualizar Gráficas del Dashboard Ejecutivo
+    initExecutiveCharts(data);
   }
+
+  let chartInstanceCompliance = null;
+  let chartInstanceCapturas = null;
+
+  function initExecutiveCharts(data) {
+    if (!data || typeof Chart === "undefined") return;
+
+    const ctxCompliance = $("chartCompliance")?.getContext("2d");
+    const ctxCapturas = $("chartCapturas")?.getContext("2d");
+
+    if (!ctxCompliance || !ctxCapturas) return;
+
+    // 1. Gráfica de Cumplimiento (Doughnut)
+    const pct = Number(data.compliance_pct || 0);
+    const remaining = Math.max(0, 100 - pct);
+    const tone = getComplianceBadgeTone(pct);
+    const colorMap = {
+      good: "#10b981", // Emerald 500
+      warn: "#f59e0b", // Amber 500
+      bad: "#ef4444"   // Red 500
+    };
+    const mainColor = colorMap[tone] || colorMap.warn;
+
+    if (chartInstanceCompliance) chartInstanceCompliance.destroy();
+    chartInstanceCompliance = new Chart(ctxCompliance, {
+      type: "doughnut",
+      data: {
+        datasets: [{
+          data: [pct, remaining],
+          backgroundColor: [mainColor, "rgba(0,0,0,0.05)"],
+          borderWidth: 0,
+          circumference: 360,
+          rotation: 0,
+          cutout: "85%",
+          borderRadius: 20
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { tooltip: { enabled: false }, legend: { display: false } }
+      }
+    });
+
+    if ($("compliancePctVal")) {
+      $("compliancePctVal").textContent = `${pct}%`;
+      $("compliancePctVal").style.color = mainColor;
+    }
+
+    // 2. Gráfica de Capturas (Bar)
+    const capturadas = data.total_capturadas || 0;
+    const faltantes = data.total_faltantes || 0;
+
+    if (chartInstanceCapturas) chartInstanceCapturas.destroy();
+    chartInstanceCapturas = new Chart(ctxCapturas, {
+      type: "bar",
+      data: {
+        labels: ["Capturadas", "Faltantes"],
+        datasets: [{
+          label: "Unidades",
+          data: [capturadas, faltantes],
+          backgroundColor: ["#10b981", "#f59e0b"],
+          borderRadius: 8,
+          barThickness: 40
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, grid: { display: false }, ticks: { precision: 0 } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+  }
+
 
   function setLoggedInUI(user, status) {
     USER = user;
@@ -6253,7 +6367,7 @@
       }
 
       const { filename, b64, downloadUrl, mimeType } = res.data;
-      
+
       if (downloadUrl) {
         // Nueva lógica: Descarga desde Google Drive (Asíncrona)
         const link = document.createElement("a");
@@ -6261,7 +6375,7 @@
         link.target = "_blank";
         link.rel = "noopener noreferrer";
         // Intentar forzar descarga si es posible (no siempre funciona cross-origin)
-        link.download = filename || "reporte.xlsx"; 
+        link.download = filename || "reporte.xlsx";
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
