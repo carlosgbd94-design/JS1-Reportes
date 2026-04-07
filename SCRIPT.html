@@ -232,11 +232,9 @@
   }
 
   function exposeAppFns() {
-    window.getTodayReports = getTodayReports;
-    window.getCaptureOverview = getCaptureOverview;
-    window.getHistoryMetrics = getHistoryMetrics;
-    window.loadNotifications = loadNotifications;
-    window.reloadCaptureSummarySilent = reloadCaptureSummarySilent;
+    // Las funciones ya están expuestas globalmente o se definen en el ámbito correcto.
+    // Se mantiene esta función vacía para evitar romper llamadas existentes si las hay,
+    // o se puede eliminar si se prefiere.
   }
 
   function assertCriticalFns() {
@@ -2615,9 +2613,13 @@
   const Drafting = {
     _getDraftKey(formId) {
       const userKey = USER ? normalize_(USER.usuario) : "anon";
-      return `draft_${userKey}_${formId}`;
+      const dateKey = todayYmdLocal();
+      return `JS1_DRAFT_${userKey}_${formId}_${dateKey}`;
     },
     save(formId) {
+      if (formId === "formSR" && HAS_TODAY_SR) return;
+      if (formId === "formCONS" && HAS_TODAY_CONS) return;
+
       const container = $(formId);
       if (!container) return;
       const data = {};
@@ -2627,12 +2629,15 @@
           data[el.id] = el.value;
         }
       });
-      if (Object.keys(data).length > 0) {
-        sessionStorage.setItem(this._getDraftKey(formId), JSON.stringify(data));
+      
+      const hasValue = Object.values(data).some(v => String(v).trim() !== "");
+      if (hasValue) {
+        localStorage.setItem(this._getDraftKey(formId), JSON.stringify(data));
+        console.log(`📝 Borrador ${formId} guardado en localStorage`);
       }
     },
     load(formId) {
-      const raw = sessionStorage.getItem(this._getDraftKey(formId));
+      const raw = localStorage.getItem(this._getDraftKey(formId));
       if (!raw) return null;
       try {
         return JSON.parse(raw);
@@ -2642,7 +2647,8 @@
     },
     apply(formId) {
       const data = this.load(formId);
-      if (!data) return;
+      if (!data) return false;
+      
       Object.keys(data).forEach(id => {
         const el = $(id);
         if (el) {
@@ -2650,10 +2656,14 @@
           el.dispatchEvent(new Event("change", { bubbles: true }));
         }
       });
-      showToast("Datos recuperados del borrador", "good");
+      syncAguja();
+      showToast("Borrador recuperado de la memoria del navegador", "info");
+      console.log(`♻️ Borrador ${formId} restaurado`);
+      return true;
     },
     clear(formId) {
-      sessionStorage.removeItem(this._getDraftKey(formId));
+      localStorage.removeItem(this._getDraftKey(formId));
+      console.log(`🧹 Borrador ${formId} eliminado`);
     },
     setupListeners() {
       ["formSR", "formCONS", "formPINOL"].forEach(formId => {
@@ -2662,23 +2672,8 @@
         container.addEventListener("input", debounce(() => {
           this.save(formId);
         }, 1000));
+        container.addEventListener("change", () => this.save(formId));
       });
-    },
-    checkAndNotify() {
-      const drafts = ["formSR", "formCONS", "formPINOL"].filter(id => !!this.load(id));
-      if (drafts.length > 0) {
-        showToast("Se encontraron datos no guardados. ¿Deseas recuperarlos?", {
-          key: "RECOVER_DRAFT",
-          type: "info",
-          duration: 15000,
-          action: {
-            label: "Recuperar",
-            callback: () => {
-              drafts.forEach(id => this.apply(id));
-            }
-          }
-        });
-      }
     }
   };
 
@@ -3269,6 +3264,42 @@
     applyLoginAutocomplete();
     applyCaptureNameAutocomplete();
     bindFastNumericFocus();
+    gcCache_();
+  }
+
+  /** 
+   * Recolección de basura del caché: Elimina llaves de sessionStorage 
+   * con más de 24 horas de antigüedad.
+   */
+  function gcCache_() {
+    try {
+      const now = Date.now();
+      const cutoff = 24 * 60 * 60 * 1000; // 24 horas
+      const keysToRemove = [];
+
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (!key) continue;
+
+        try {
+          const raw = sessionStorage.getItem(key);
+          const obj = JSON.parse(raw);
+          // Si tiene timestamp (nuestro formato de cache) y ya expiró
+          if (obj && obj.ts && (now - obj.ts > cutoff)) {
+            keysToRemove.push(key);
+          }
+        } catch (e) {
+          // No es un objeto JSON de nuestro cache, ignorar
+        }
+      }
+
+      if (keysToRemove.length > 0) {
+        keysToRemove.forEach(k => sessionStorage.removeItem(k));
+        console.log(`🧹 Cache GC: Se eliminaron ${keysToRemove.length} llaves obsoletas.`);
+      }
+    } catch (e) {
+      console.warn("gcCache_ error:", e);
+    }
   }
 
   const debouncedReloadCaptureSummary = debounce(() => {
@@ -3356,6 +3387,7 @@
     bindSummaryUiEvents();
     bindMetricsUiEvents();
     bindCaptureUtilityEvents();
+    Drafting.setupListeners();
     runBootUiSetup();
 
     syncAppState({
@@ -4905,29 +4937,20 @@
     if (HAS_TODAY_SR) {
       loadExistenciaIntoForm(TODAY_CACHE.sr);
     } else {
-      if ($("nombreSR")) $("nombreSR").value = "";
+      // Intentar restaurar borrador de emergencia si no hay captura oficial
+      const restored = Drafting.apply("formSR");
+      if (!restored) {
+        if ($("nombreSR")) $("nombreSR").value = "";
 
-      [
-        "bcg",
-        "hepatitis_b",
-        "hexavalente",
-        "dpt",
-        "rotavirus",
-        "neumococica_13",
-        "neumococica_20",
-        "srp",
-        "sr",
-        "vph",
-        "varicela",
-        "hepatitis_a",
-        "td",
-        "tdpa",
-        "covid_19",
-        "influenza",
-        "vsr"
-      ].forEach(id => {
-        if ($(id)) $(id).value = "";
-      });
+        [
+          "bcg", "hepatitis_b", "hexavalente", "dpt", "rotavirus",
+          "neumococica_13", "neumococica_20", "srp", "sr", "vph",
+          "varicela", "hepatitis_a", "td", "tdpa", "covid_19",
+          "influenza", "vsr"
+        ].forEach(id => {
+          if ($(id)) $(id).value = "";
+        });
+      }
 
       ORIGINAL_SR = null;
     }
@@ -4935,12 +4958,16 @@
     if (HAS_TODAY_CONS) {
       loadCONSIntoForm(TODAY_CACHE.cons);
     } else {
-      if ($("nombreCONS")) $("nombreCONS").value = "";
-      if ($("srp_dosis")) $("srp_dosis").value = "";
-      if ($("sr_dosis")) $("sr_dosis").value = "";
-      if ($("jeringa_reconst_5ml_0605500438")) $("jeringa_reconst_5ml_0605500438").value = "";
-      if ($("jeringa_aplic_05ml_0605502657")) $("jeringa_aplic_05ml_0605502657").value = "";
-      if ($("aguja_0600403711")) $("aguja_0600403711").value = "";
+      // Intentar restaurar borrador de emergencia si no hay captura oficial
+      const restored = Drafting.apply("formCONS");
+      if (!restored) {
+        if ($("nombreCONS")) $("nombreCONS").value = "";
+        if ($("srp_dosis")) $("srp_dosis").value = "";
+        if ($("sr_dosis")) $("sr_dosis").value = "";
+        if ($("jeringa_reconst_5ml_0605500438")) $("jeringa_reconst_5ml_0605500438").value = "";
+        if ($("jeringa_aplic_05ml_0605502657")) $("jeringa_aplic_05ml_0605502657").value = "";
+        if ($("aguja_0600403711")) $("aguja_0600403711").value = "";
+      }
       ORIGINAL_CONS = null;
     }
 
@@ -6225,13 +6252,28 @@
         return;
       }
 
-      const { filename, b64, mimeType } = res.data;
-      const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-      const blob = new Blob([bytes], { type: mimeType || "application/octet-stream" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = filename || "reporte.xlsx";
-      link.click();
+      const { filename, b64, downloadUrl, mimeType } = res.data;
+      
+      if (downloadUrl) {
+        // Nueva lógica: Descarga desde Google Drive (Asíncrona)
+        const link = document.createElement("a");
+        link.href = downloadUrl;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        // Intentar forzar descarga si es posible (no siempre funciona cross-origin)
+        link.download = filename || "reporte.xlsx"; 
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else if (b64) {
+        // Legacy: Descarga desde Base64 (Síncrona)
+        const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+        const blob = new Blob([bytes], { type: mimeType || "application/octet-stream" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = filename || "reporte.xlsx";
+        link.click();
+      }
 
       showToast("El archivo se exportó correctamente");
 
