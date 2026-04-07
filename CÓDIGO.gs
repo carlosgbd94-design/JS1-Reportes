@@ -238,6 +238,18 @@ function api_uploadFile(payload) {
       throw new Error("Datos de archivo incompletos.");
     }
 
+    // [VALIDACIÓN] Lista blanca de tipos de archivos permitidos
+    const allowedMimeTypes = [
+      "image/jpeg",
+      "image/png",
+      "application/pdf",
+      "image/webp"
+    ];
+
+    if (!allowedMimeTypes.includes(String(mimeType || "").toLowerCase())) {
+      throw new Error("Tipo de archivo no permitido. Solo se admiten PDF e imágenes (JPG, PNG, WEBP).");
+    }
+
     // Determinar la unidad destino
     let finalClues = u.clues;
     let finalUnidad = u.unidad;
@@ -1578,37 +1590,52 @@ function findRowByFechaClues_(sh, fecha, clues) {
   const last = sh.getLastRow();
   if (last < 2) return 0;
 
+  const sheetName = sh.getName();
   const fechaKey = normalizeDateKey_(fecha);
   const cluesKey = normalizeClues_(clues);
 
-  const data = sh.getRange(2, 1, last - 1, sh.getLastColumn()).getValues();
-  for (let i = 0; i < data.length; i++) {
-    const r = data[i];
-    const rowFecha = normalizeDateKey_(r[2]);
-    const rowClues = normalizeClues_(r[4]);
+  // Optimizamos: traemos solo el rango que contiene Fecha y CLUES
+  // En la mayoría de las hojas Clues está en Col E (5) o Col F (6)
+  // Traemos desde C (3) hasta F (6) para cubrir todos los casos
+  const data = sh.getRange(2, 3, last - 1, 4).getValues(); 
 
-    if (rowFecha === fechaKey && rowClues === cluesKey) {
+  // Determinamos el índice de la columna CLUES relativo al rango (C=0, D=1, E=2, F=3)
+  let idxCluesRel = 2; // Default: Col E
+  if (sheetName === SHEET_BIO_CAPTURE) idxCluesRel = 3; // Col F
+
+  // Usamos findIndex para mayor velocidad en memoria
+  const rowIndex = data.findIndex(r => {
+    return normalizeDateKey_(r[0]) === fechaKey && normalizeClues_(r[idxCluesRel]) === cluesKey;
+  });
+
+  return rowIndex === -1 ? 0 : rowIndex + 2;
+}
+
+function findRowByFechaCluesInRange_(sh, fechaInicio, fechaFin, clues) {
+  const last = sh.getLastRow();
+  if (last < 2) return 0;
+
+  const sheetName = sh.getName();
+  const inicioKey = normalizeDateKey_(fechaInicio);
+  const finKey = normalizeDateKey_(fechaFin);
+  const cluesKey = normalizeClues_(clues);
+
+  const data = sh.getRange(2, 3, last - 1, 4).getValues();
+
+  let idxCluesRel = 2; // Default: Col E
+  if (sheetName === SHEET_BIO_CAPTURE) idxCluesRel = 3; // Col F
+
+  // Buscamos de abajo hacia arriba (más reciente primero)
+  for (let i = data.length - 1; i >= 0; i--) {
+    const f = normalizeDateKey_(data[i][0]);
+    const c = normalizeClues_(data[i][idxCluesRel]);
+
+    if (c === cluesKey && f >= inicioKey && f <= finKey) {
       return i + 2;
     }
   }
+
   return 0;
-}
-
-function findRowByFechaCluesInRange_(sh, fechaInicio, fechaFin, clues){
-  const data = sh.getDataRange().getValues();
-  const idxFecha = 2;
-  const idxClues = 4;
-
-  for (let i = data.length - 1; i >= 1; i--){
-    const f = normalizeDateKey_(data[i][idxFecha]);
-    const c = normalize_(data[i][idxClues]);
-
-    if (c === clues && f >= fechaInicio && f <= fechaFin){
-      return i + 1;
-    }
-  }
-
-  return null;
 }
 
 function toCsv_(rows) {
