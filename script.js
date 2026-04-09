@@ -72,15 +72,23 @@ async function loadHomeLogos() {
     console.warn("Error cargando logos:", e);
   }
 }
-document.addEventListener("DOMContentLoaded", loadHomeLogos);
+document.addEventListener("DOMContentLoaded", () => {
+    console.log("📍 DOMContentLoaded: Iniciando carga de logos...");
+    loadHomeLogos();
+});
 
-  const overlay = $("overlay");
-  const overlayMsg = $("overlayMsg");
-  const toast = $("toast");
-  const toastMsg = $("toastMsg");
-
-  const overlayTitle = $("overlayTitle");
+  let overlay, overlayMsg, toast, toastMsg, overlayTitle;
   let TOAST_TIMER = null;
+
+  document.addEventListener("DOMContentLoaded", () => {
+    overlay = $("overlay");
+    overlayMsg = $("overlayMsg");
+    toast = $("toast");
+    toastMsg = $("toastMsg");
+    overlayTitle = $("overlayTitle");
+    
+    console.log("🚀 App Initialize: Core UI elements mapped.");
+  });
 
   function showOverlay(msg = "Cargando…", title = "Procesando") {
     if (overlayTitle) overlayTitle.textContent = title;
@@ -5632,6 +5640,7 @@ document.addEventListener("DOMContentLoaded", loadHomeLogos);
 
   $("loginForm").addEventListener("submit", async (ev) => {
     ev.preventDefault();
+    console.log("🔑 Submit: Intentando inicio de sesión...");
     showOverlay("Validando tus credenciales…", "Iniciando sesión");
 
     try {
