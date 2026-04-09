@@ -109,6 +109,25 @@ const NOTIF_PREF_KEYS = {
   groups: "js1_notif_groups"
 };
 
+const UX_KEYS = {
+  lastUser: "JS1_LAST_USER",
+  existenciaName: "JS1_LAST_EXISTENCIA_NAME",
+  consName: "JS1_LAST_CONS_NAME",
+  bioName: "JS1_LAST_BIO_NAME",
+  pinolName: "JS1_LAST_PINOL_NAME"
+};
+
+function getUxValue(key) {
+  try { return localStorage.getItem(key) || ""; } catch (e) { return ""; }
+}
+function saveUxValue(key, value) {
+  try {
+    const v = String(value || "").trim();
+    if (!v) return;
+    localStorage.setItem(key, v);
+  } catch (e) { }
+}
+
 // Elementos de UI globales (mapeados al inicio)
 let overlay, overlayMsg, toast, toastMsg, overlayTitle;
 let TOAST_TIMER = null;
@@ -193,16 +212,16 @@ if (document.readyState === "complete" || document.readyState === "interactive")
 
 // Cargar logos de forma asíncrona (sustituye <?= LOGO_A ?>)
 async function loadHomeLogos() {
-  const logoA = $("logoA");
-  const logoB = $("logoB");
-  if (!logoA || !logoB) return;
-  
   try {
-    const res = await google.script.run.api({ action: "getLogos" });
-    if (res && res.ok) {
-      if (res.LOGO_A) logoA.src = res.LOGO_A;
-      if (res.LOGO_B) logoB.src = res.LOGO_B;
-    }
+    google.script.run
+      .withSuccessHandler(r => {
+        if (r && r.ok) {
+          if (r.LOGO_A && $("logoA")) $("logoA").src = r.LOGO_A;
+          if (r.LOGO_B && $("logoB")) $("logoB").src = r.LOGO_B;
+        }
+      })
+      .withFailureHandler(err => console.warn("Fallo al precargar logos (backend antiguo o CORS):", err))
+      .api({ action: "getLogos" });
   } catch (e) {
     console.warn("Error cargando logos:", e);
   }
@@ -2395,29 +2414,6 @@ async function loadHomeLogos() {
 
   let FORCE_PASSWORD_CHANGE = false;
 
-  const UX_KEYS = {
-    lastUser: "JS1_LAST_USER",
-    existenciaName: "JS1_LAST_EXISTENCIA_NAME",
-    consName: "JS1_LAST_CONS_NAME",
-    bioName: "JS1_LAST_BIO_NAME",
-    pinolName: "JS1_LAST_PINOL_NAME"
-  };
-
-  function saveUxValue(key, value) {
-    try {
-      const v = String(value || "").trim();
-      if (!v) return;
-      localStorage.setItem(key, v);
-    } catch (e) { }
-  }
-
-  function getUxValue(key) {
-    try {
-      return localStorage.getItem(key) || "";
-    } catch (e) {
-      return "";
-    }
-  }
 
   function fillIfEmpty(id, value) {
     const el = $(id);
@@ -5206,7 +5202,7 @@ async function loadHomeLogos() {
     if ($("tabNOTIFS")) $("tabNOTIFS").style.display = (isAdmin || isJurisdiccional || isMunicipal) ? "block" : "none";
     if ($("btnTopNotifications")) $("btnTopNotifications").style.display = (isUnidad || isAdmin || isJurisdiccional || isMunicipal) ? "inline-flex" : "none";
 
-    if ($("topNotifRoleKpi")) $("topNotifRoleKpi").textContent = user.rol || "—";
+    if ($("topNotifRoleKpi")) $("topNotifRoleKpi").textContent = user.rol || " — ";
 
     if ($("tabSR")) $("tabSR").style.display = isUnidad ? "block" : "none";
     if ($("tabCONS")) $("tabCONS").style.display = isUnidad ? "block" : "none";
@@ -5236,7 +5232,7 @@ async function loadHomeLogos() {
     }
 
     if ($("notifRoleKpi")) {
-      $("notifRoleKpi").textContent = user.rol || "—";
+      $("notifRoleKpi").textContent = user.rol || " — ";
     }
 
     if ($("panelNOTIFS")) $("panelNOTIFS").style.display = (isAdmin || isJurisdiccional || isMunicipal) ? "" : "none";
