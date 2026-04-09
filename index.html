@@ -116,12 +116,35 @@
                 <button class="tab" id="tabCONS">Consumibles</button>
               </div>
               <div id="formSR">
-                <!-- Campos SR -->
-                <button class="btn" id="btnSaveSR">Guardar</button>
+                <div class="field">
+                  <label>Nombre del responsable</label>
+                  <input id="nombreSR" placeholder="Nombre completo">
+                </div>
+                <div class="inputGrid">
+                  <div class="field"><label>BCG</label><input type="number" id="bcg"></div>
+                  <div class="field"><label>Hep B</label><input type="number" id="hepatitis_b"></div>
+                  <div class="field"><label>Hexa</label><input type="number" id="hexavalente"></div>
+                  <div class="field"><label>Rotavirus</label><input type="number" id="rotavirus"></div>
+                  <div class="field"><label>Neumo 13</label><input type="number" id="neumococica_13"></div>
+                  <div class="field"><label>SRP</label><input type="number" id="srp"></div>
+                  <div class="field"><label>SR</label><input type="number" id="sr"></div>
+                  <div class="field"><label>Td</label><input type="number" id="td"></div>
+                  <div class="field"><label>Tdpa</label><input type="number" id="tdpa"></div>
+                  <div class="field"><label>Influenza</label><input type="number" id="influenza"></div>
+                </div>
+                <button class="btn" id="btnSaveSR">Guardar Existencia</button>
               </div>
               <div id="formCONS" style="display:none">
-                <!-- Campos CONS -->
-                <button class="btn" id="btnSaveCONS">Guardar</button>
+                <div class="field">
+                  <label>Responsable</label>
+                  <input id="nombreCONS" placeholder="Nombre completo">
+                </div>
+                <div class="inputGrid">
+                  <div class="field"><label>SRP (Dosis)</label><input type="number" id="srp_dosis"></div>
+                  <div class="field"><label>SR (Dosis)</label><input type="number" id="sr_dosis"></div>
+                  <div class="field"><label>Jeringa 5ml</label><input type="number" id="jeringa_reconst_5ml_0605500438"></div>
+                </div>
+                <button class="btn" id="btnSaveCONS">Guardar Consumibles</button>
               </div>
             </div>
           </div>
