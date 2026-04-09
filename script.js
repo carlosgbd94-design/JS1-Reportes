@@ -49,12 +49,107 @@ if (typeof google === 'undefined' || !google.script || !google.script.run) {
 }
 
 /** ===== ORIGINAL SCRIPT START ===== **/
-const $ = (id) => document.getElementById(id);
+const $ = (id) => {
+  const el = document.getElementById(id);
+  if (!el && window.DEBUG_MODE) console.warn(`[DOM] Elemento no encontrado: #${id}`);
+  return el;
+};
+window.DEBUG_MODE = true;
 
 // Configuración para Vercel
 const urlParams = new URLSearchParams(window.location.search);
 window.PAGE_MODE = urlParams.get('mode') || "";
 window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycby3en_qswj1PmE6o80nypsDM6Gw4kueRUimNSgMKJxzDojRFCsXBjFZngR9UpnkYL0n/exec";
+
+// --- ESTADO GLOBAL (Mantenido al inicio para evitar ReferenceError) ---
+let TOKEN = localStorage.getItem("JS1_TOKEN") || "";
+let USER = null;
+let STATUS = null;
+let UNIT_CATALOG = [];
+let LIVE_TIMERS_STARTED = false;
+let LIVE_TIMERS = [];
+
+// Elementos de UI globales (mapeados al inicio)
+let overlay, overlayMsg, toast, toastMsg, overlayTitle;
+let TOAST_TIMER = null;
+
+const LIVE_STATE = {
+  // ... (mismo contenido)
+  pinolPendientes: null,
+  summaryCapturadas: null,
+  summaryFaltantes: null,
+  todayExistenciaCaptured: null,
+  todayConsCaptured: null,
+  lastHistoryRows: null,
+  summaryKey: null,
+  notifCount: 0,
+  notifWarnCount: 0,
+  notifGoodCount: 0,
+  lastToastKey: "",
+  lastEventKey: "",
+  mutedUntil: 0,
+  lastEventTs: 0,
+  eventCooldownMs: 2200,
+  eventHistory: {},
+  pinolWatching: false,
+  summaryWatching: false,
+  unidadWatching: false,
+  historyWatching: false
+};
+// ---------------------------------------------------------------------
+
+function bootstrapApp() {
+    if (window.APP_INITIALIZED) return;
+    console.log("🚀 Iniciando Bootstrap de la aplicación...");
+    
+    try {
+        // 1. Mapeo de elementos core
+        overlay = $("overlay");
+        overlayMsg = $("overlayMsg");
+        toast = $("toast");
+        toastMsg = $("toastMsg");
+        overlayTitle = $("overlayTitle");
+
+        // 2. Inicialización de componentes (Shell, Reloj, Clima)
+        if (typeof initAppShell === "function") initAppShell();
+        if (typeof paintPublicClock === "function") paintPublicClock();
+        if (typeof startPublicClockTimer === "function") startPublicClockTimer();
+        if (typeof initWeather === "function") initWeather();
+        
+        // 3. Carga asíncrona de recursos (Logos)
+        if (typeof loadHomeLogos === "function") loadHomeLogos();
+        
+        // 4. Temporizadores de actualización
+        if (typeof LIVE_TIMERS !== 'undefined') {
+            LIVE_TIMERS.push(setInterval(() => {
+                if (typeof initWeather === "function") initWeather();
+            }, 900000));
+        }
+
+        // 4. Listeners globales
+        document.addEventListener("scroll", (e) => {
+            const wrap = e.target;
+            if (wrap && wrap.classList && wrap.classList.contains("tableWrap")) {
+                const isScrolled = wrap.scrollTop > 2;
+                if (wrap.classList.contains("is-scrolled") !== isScrolled) {
+                    wrap.classList.toggle("is-scrolled", isScrolled);
+                }
+            }
+        }, true);
+
+        window.APP_INITIALIZED = true;
+        console.log("✅ Bootstrap completado con éxito.");
+    } catch (e) {
+        console.error("❌ Fallo crítico en bootstrapApp:", e);
+    }
+}
+
+document.addEventListener("DOMContentLoaded", bootstrapApp);
+
+// Fallback por si el DOM ya estaba listo (común en entornos Vite/Dev)
+if (document.readyState === "complete" || document.readyState === "interactive") {
+    if (!window.APP_INITIALIZED) bootstrapApp();
+}
 
 // Cargar logos de forma asíncrona (sustituye <?= LOGO_A ?>)
 async function loadHomeLogos() {
@@ -72,23 +167,7 @@ async function loadHomeLogos() {
     console.warn("Error cargando logos:", e);
   }
 }
-document.addEventListener("DOMContentLoaded", () => {
-    console.log("📍 DOMContentLoaded: Iniciando carga de logos...");
-    loadHomeLogos();
-});
 
-  let overlay, overlayMsg, toast, toastMsg, overlayTitle;
-  let TOAST_TIMER = null;
-
-  document.addEventListener("DOMContentLoaded", () => {
-    overlay = $("overlay");
-    overlayMsg = $("overlayMsg");
-    toast = $("toast");
-    toastMsg = $("toastMsg");
-    overlayTitle = $("overlayTitle");
-    
-    console.log("🚀 App Initialize: Core UI elements mapped.");
-  });
 
   function showOverlay(msg = "Cargando…", title = "Procesando") {
     if (overlayTitle) overlayTitle.textContent = title;
@@ -3068,35 +3147,6 @@ document.addEventListener("DOMContentLoaded", () => {
     await Promise.allSettled(jobs);
   }
 
-  let TOKEN = localStorage.getItem("JS1_TOKEN") || "";
-  let USER = null;
-  let STATUS = null;
-  let UNIT_CATALOG = [];
-  let LIVE_TIMERS_STARTED = false;
-  let LIVE_TIMERS = [];
-
-  const LIVE_STATE = {
-    pinolPendientes: null,
-    summaryCapturadas: null,
-    summaryFaltantes: null,
-    todayExistenciaCaptured: null,
-    todayConsCaptured: null,
-    lastHistoryRows: null,
-    summaryKey: null,
-    notifCount: 0,
-    notifWarnCount: 0,
-    notifGoodCount: 0,
-    lastToastKey: "",
-    lastEventKey: "",
-    mutedUntil: 0,
-    lastEventTs: 0,
-    eventCooldownMs: 2200,
-    eventHistory: {},
-    pinolWatching: false,
-    summaryWatching: false,
-    unidadWatching: false,
-    historyWatching: false
-  };
 
   function initStaticAssets() {
     const a = $("logoA");
@@ -3498,22 +3548,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
-    initAppShell();
-    paintPublicClock();
-    startPublicClockTimer();
-
-    // Scroll-aware sticky headers for tables
-    document.addEventListener("scroll", (e) => {
-      const wrap = e.target;
-      if (wrap && wrap.classList && wrap.classList.contains("tableWrap")) {
-        const isScrolled = wrap.scrollTop > 2;
-        if (wrap.classList.contains("is-scrolled") !== isScrolled) {
-          wrap.classList.toggle("is-scrolled", isScrolled);
-        }
-      }
-    }, true); // Capture phase required for scroll events
-  });
 
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
@@ -7900,18 +7934,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Esperar a que el DOM esté listo antes de arrancar
-  document.addEventListener('DOMContentLoaded', () => {
-    initWeather();
-    // Añadirlo a LIVE_TIMERS solo si está definido (evitar ReferenceError preventivo)
-    if (typeof LIVE_TIMERS !== 'undefined') {
-      LIVE_TIMERS.push(setInterval(initWeather, 900000));
-    }
-  });
-
-  // Fallback por si DOMContentLoaded ya pasó
-  if (document.readyState === "complete" || document.readyState === "interactive") {
-    initWeather();
-  }
+  // initWeather movido al bootstrap global
 
 
   softenMobileFocusZoom();
