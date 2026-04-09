@@ -549,6 +549,39 @@
     border-radius: 18px 18px 0 0;
   }
 
+  /* ✅ MD3 DASHBOARD CARD (Premium) */
+  .dashboardCard {
+    background: var(--md-surface-container-low);
+    border-radius: 28px;
+    padding: 24px;
+    border: 1px solid var(--md-outline-variant);
+    box-shadow: var(--md-shadow-1);
+    transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  .dashboardCard:hover {
+    box-shadow: var(--md-shadow-2);
+    background: var(--md-surface-container);
+    transform: translateY(-2px);
+  }
+
+  .dashboardCard::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at top right, rgba(4, 30, 66, 0.03), transparent 70%);
+    pointer-events: none;
+  }
+
   .title {
     display: flex;
     align-items: flex-start;
@@ -734,6 +767,88 @@
   #btnLogin:hover {
     transform: translateY(-1px);
     box-shadow: var(--md-shadow-3);
+  }
+
+  /* ✅ MD3 Unified Action Buttons (System Standard) */
+  .md-btn-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px 24px;
+    border-radius: 100px; /* MD3 Pill shape */
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    text-decoration: none;
+    line-height: 1;
+    min-height: 44px;
+  }
+
+  .md-btn-action .material-symbols-rounded {
+    font-size: 20px;
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  /* Variant: Confirm (Primary) */
+  .btn-confirm-action {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    box-shadow: var(--md-shadow-1);
+  }
+
+  .btn-confirm-action:hover {
+    box-shadow: var(--md-shadow-2);
+    transform: translateY(-2px);
+    filter: brightness(1.1);
+  }
+
+  /* Variant: Dismiss/Close (Tonal) */
+  .btn-close-action {
+    background: var(--md-sys-color-secondary-tonal);
+    color: var(--md-sys-color-on-secondary-tonal);
+    border: 1px solid rgba(0,0,0,0.05);
+  }
+
+  .btn-close-action:hover {
+    background: var(--md-sys-color-surface-container-highest);
+    transform: translateY(-2px);
+    box-shadow: var(--md-shadow-1);
+  }
+
+  /* Variant: Danger/Delete (Error Tonal) */
+  .btn-delete-action {
+    background: var(--md-sys-color-error-container);
+    color: var(--md-sys-color-on-error-container);
+    border: 1px solid rgba(255, 0, 0, 0.05);
+  }
+
+  .btn-delete-action:hover {
+    background: #ffb4ab; /* Intensify Error Container */
+    color: #410002;
+    transform: translateY(-2px);
+    box-shadow: var(--md-shadow-2);
+  }
+
+  /* Re-implement Rotation Animation for Delete Button */
+  .btn-delete-action:hover .material-symbols-rounded {
+    transform: rotate(90deg) scale(1.1);
+  }
+
+  .md-btn-action:active {
+    transform: scale(0.95);
+  }
+
+  /* Helper for circular icon-only action buttons */
+  .md-btn-action.icon-only {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    padding: 0;
+    border-radius: 50%;
   }
 
   input[type="date"] {
@@ -2851,31 +2966,53 @@
   .exportQuickBtn {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 6px 14px;
-    font-size: 12px;
+    gap: 8px;
+    padding: 8px 18px;
+    font-size: 13px;
     font-weight: 700;
-    letter-spacing: .3px;
-    color: var(--md-sys-color-primary);
-    background: var(--md-surface-container-high);
-    border: 1px solid var(--md-outline-variant);
-    border-radius: 8px;
+    border-radius: 12px;
     cursor: pointer;
-    transition: all .18s ease;
+    border: none;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    line-height: 1;
+  }
+
+  /* MD3 Specific: Todos (Tonal Select) */
+  #btnExportSelectAll {
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+  }
+
+  /* MD3 Specific: Ninguno (Tonal Surface) */
+  #btnExportClearAll {
+    background: var(--md-sys-color-surface-container-highest);
+    color: var(--md-sys-color-on-surface-variant);
   }
 
   .exportQuickBtn .material-symbols-rounded {
-    font-size: 15px;
+    font-size: 18px;
+    font-variation-settings: 'FILL' 1, 'wght' 600;
   }
 
   .exportQuickBtn:hover {
-    background: rgba(34, 197, 94, .10);
-    border-color: rgba(34, 197, 94, .30);
-    color: #fff;
+    transform: scale(1.05);
+    filter: brightness(0.95);
+  }
+
+  /* Intensify contrast on hover for 'Todos' */
+  #btnExportSelectAll:hover {
+    background: var(--md-sys-color-primary);
+    color: #ffffff;
+  }
+
+  /* Intensify contrast on hover for 'Ninguno' */
+  #btnExportClearAll:hover {
+    background: var(--md-sys-color-on-surface-variant);
+    color: #ffffff;
   }
 
   .exportQuickBtn:active {
-    transform: scale(.96);
+    transform: scale(0.94);
   }
 
   /* ── Modern Toggle: DESKTOP = checkbox, MOBILE = iOS switch ── */
@@ -5332,7 +5469,47 @@
     border-radius: 14px;
   }
 
+  /* 🌟 CLASES PARA MODALES MODERNOS (MD3) */
+  .modern-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(5px);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .modern-overlay.show {
+    display: flex;
+    opacity: 1;
+  }
+
+  .modern-modal-content {
+    background: #ffffff;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    border-radius: 28px;
+    box-shadow: var(--md-shadow-5);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: modalScaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes modalScaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
   /* EXPORT MODAL UNIFICADO PREMIUM */
+
   #exportOverlay .modalGlass {
     max-width: 640px;
     height: auto;
@@ -7309,5 +7486,147 @@
   .appFooter a:hover {
     color: var(--md-sys-color-primary);
     text-decoration: underline;
+  }
+
+  /* ✅ SUPERVISION LIST CARDS (Premium MD3) */
+  .modern-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 4px;
+    max-height: 50vh;
+    overflow-y: auto;
+  }
+
+  /* 💎 SUPERVISION HISTORY STYLES (MATERIAL 3) */
+  .sup-item-card {
+    position: relative;
+    display: flex;
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid var(--md-outline-variant);
+    overflow: hidden;
+    margin-bottom: 12px;
+    transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+
+  .sup-item-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    border-color: var(--md-sys-color-primary);
+  }
+
+  .sup-card-accent {
+    width: 6px;
+    background: var(--md-sys-color-primary);
+  }
+
+  .sup-info-main {
+    flex: 1;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .sup-header {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .sup-type-icon {
+    font-size: 24px;
+    color: var(--md-sys-color-primary);
+    background: var(--md-sys-color-primary-container);
+    padding: 8px;
+    border-radius: 12px;
+  }
+
+  .sup-title-col {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sup-fecha-label {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--md-sys-color-on-surface);
+  }
+
+  .sup-supervisor-name {
+    font-size: 12px;
+    color: var(--md-sys-color-secondary);
+    font-weight: 600;
+  }
+
+  .sup-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--md-surface-container-highest);
+    padding-top: 12px;
+    margin-top: 4px;
+  }
+
+  .sup-tag {
+    font-size: 11px;
+    background: var(--md-surface-container-high);
+    color: var(--md-sys-color-on-surface-variant);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 700;
+  }
+
+  .sup-action-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+    color: var(--md-sys-color-primary);
+    font-size: 13px;
+    font-weight: 800;
+    transition: color 0.2s;
+  }
+
+  .sup-action-link:hover {
+    color: var(--md-sys-color-secondary);
+    text-decoration: underline;
+  }
+
+  .sup-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 40px;
+    text-align: center;
+    color: var(--md-sys-color-on-surface-variant);
+  }
+
+  .sup-empty-icon {
+    width: 64px;
+    height: 64px;
+    background: var(--md-surface-container-high);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    color: var(--md-sys-color-primary);
+    opacity: 0.5;
+  }
+
+  .sup-empty-state span { font-size: 32px; }
+  .sup-empty-state p { 
+    font-weight: 800; 
+    margin: 0; 
+    font-size: 16px;
+    color: var(--md-sys-color-on-surface);
+  }
+  .sup-empty-state small { 
+    font-weight: 500; 
+    opacity: 0.7; 
   }
 </style>
