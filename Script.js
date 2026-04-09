@@ -2773,34 +2773,46 @@
     showToast(message, "info");
   }
 
-  function apiCall(actionOrPayload, payload = {}) {
-    let finalPayload = {};
+// Script.js
 
-    if (typeof actionOrPayload === "string") {
-      finalPayload = Object.assign({}, payload, {
-        action: actionOrPayload,
-        token: payload.token || TOKEN
-      });
-    } else if (actionOrPayload && typeof actionOrPayload === "object") {
-      finalPayload = Object.assign({}, actionOrPayload);
-      if (!finalPayload.token) {
-        finalPayload.token = TOKEN;
-      }
-    } else {
-      return Promise.reject(new Error("Parámetros inválidos para apiCall"));
-    }
+// Pega aquí la URL del nuevo despliegue de tu Apps Script
+const API_URL = "LA_URL_DE_TU_APPS_SCRIPT_AQUI"; 
 
-    return new Promise((resolve, reject) => {
-      google.script.run
-        .withSuccessHandler((res) => {
-          resolve(res);
-        })
-        .withFailureHandler((err) => {
-          reject(err instanceof Error ? err : new Error(String(err || "Error de servidor.")));
-        })
-        .api(finalPayload);
+function apiCall(actionOrPayload, payload = {}) {
+  let finalPayload = {};
+
+  if (typeof actionOrPayload === "string") {
+    finalPayload = Object.assign({}, payload, {
+      action: actionOrPayload,
+      token: payload.token || TOKEN
     });
+  } else if (actionOrPayload && typeof actionOrPayload === "object") {
+    finalPayload = Object.assign({}, actionOrPayload);
+    if (!finalPayload.token) {
+      finalPayload.token = TOKEN;
+    }
+  } else {
+    return Promise.reject(new Error("Parámetros inválidos para apiCall"));
   }
+
+  return fetch(API_URL, {
+    method: "POST",
+    // IMPORTANTE: el body debe ser texto (JSON.stringify)
+    body: JSON.stringify(finalPayload), 
+    headers: {
+      "Content-Type": "text/plain;charset=utf-8", 
+    }
+  })
+  .then(res => {
+    if (!res.ok) throw new Error("Error de red o servidor al comunicar con Apps Script");
+    return res.json();
+  })
+  .then(data => {
+    // Si Apps Script manda error interno
+    if (data.error) throw new Error(data.error); 
+    return data;
+  });
+}
 
   const CLIENT_CACHE_PREFIX = "JS1_CACHE::";
 
