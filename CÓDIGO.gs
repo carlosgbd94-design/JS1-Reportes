@@ -6131,3 +6131,15 @@ function api_getSupervisions(payload) {
     return { ok: false, error: String(e.message || e) };
   }
 }
+
+function doPost(e) {
+  // 1. Recibir los datos enviados desde Vercel
+  const payloadData = JSON.parse(e.postData.contents);
+  
+  // 2. Mandar los datos a tu función api() central
+  const resultado = api(payloadData);
+  
+  // 3. Devolver la respuesta a Vercel en formato JSON
+  return ContentService.createTextOutput(JSON.stringify(resultado))
+    .setMimeType(ContentService.MimeType.JSON);
+}
