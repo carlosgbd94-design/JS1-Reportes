@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -8,7 +9,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+    rel="stylesheet">
 
   <style>
     :root {
@@ -17,33 +20,35 @@
       --md-sys-color-on-primary: #ffffff;
       --md-sys-color-primary-container: #d6e2ff;
       --md-sys-color-on-primary-container: #001b3e;
-      
+
       --md-sys-color-secondary: #565e71;
       --md-sys-color-on-secondary: #ffffff;
-      
+
       --md-sys-color-surface: #fdfbff;
       --md-sys-color-on-surface: #1a1b1f;
       --md-sys-color-surface-container: #f2f3f7;
       --md-sys-color-surface-container-highest: #e2e2e6;
-      
+
       --md-sys-color-outline: #74777f;
       --md-sys-color-outline-variant: #c4c6cf;
-      
+
       --md-sys-color-success: #006d3a;
       --md-sys-color-error: #ba1a1a;
-      
+
       --bg: #f8f9fc;
       --accent-gradient: linear-gradient(135deg, #001B3D 0%, #003366 100%);
     }
 
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       margin: 0;
       min-height: 100vh;
       font-family: 'Outfit', system-ui, -apple-system, sans-serif;
       background: var(--bg);
-      background-image: 
+      background-image:
         radial-gradient(at 0% 0%, rgba(0, 27, 61, 0.05) 0px, transparent 50%),
         radial-gradient(at 100% 0%, rgba(56, 198, 142, 0.05) 0px, transparent 50%);
       color: var(--md-sys-color-on-surface);
@@ -56,7 +61,8 @@
     .card {
       width: min(440px, 100%);
       background: #ffffff;
-      border-radius: 28px; /* MD3 Premium Radius */
+      border-radius: 28px;
+      /* MD3 Premium Radius */
       padding: 32px;
       box-shadow: 0 12px 48px rgba(0, 27, 61, 0.08);
       border: 1px solid var(--md-sys-color-outline-variant);
@@ -182,9 +188,19 @@
       font-weight: 600;
     }
 
-    .msg.show { display: block; }
-    .msg.ok { background: #e6f4ea; color: #1e7e34; }
-    .msg.bad { background: #fce8e6; color: #c5221f; }
+    .msg.show {
+      display: block;
+    }
+
+    .msg.ok {
+      background: #e6f4ea;
+      color: #1e7e34;
+    }
+
+    .msg.bad {
+      background: #fce8e6;
+      color: #c5221f;
+    }
 
     .footer-text {
       margin-top: 24px;
@@ -223,15 +239,16 @@
     .overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0, 27, 61, 0.4);
-      backdrop-filter: blur(4px);
+      background: rgba(0, 27, 61, 0.85);
       display: none;
       align-items: center;
       justify-content: center;
       z-index: 100;
     }
 
-    .overlay.show { display: flex; }
+    .overlay.show {
+      display: flex;
+    }
 
     .loader {
       background: #ffffff;
@@ -251,9 +268,14 @@
       animation: spin 1s linear infinite;
     }
 
-    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
   </style>
 </head>
+
 <body>
   <div class="card" id="mainCard">
     <div class="eyebrow">
@@ -284,7 +306,8 @@
     <div id="successBox">
       <div id="successIcon" class="material-symbols-rounded">check_circle_outline</div>
       <h2 style="margin:0; font-size:20px; font-weight:900; color:#1e7e34;">¡Listo!</h2>
-      <p style="margin:8px 0 0; font-size:14px; color:#565e71;">Tu contraseña ha sido actualizada satisfactoriamente.</p>
+      <p style="margin:8px 0 0; font-size:14px; color:#565e71;">Tu contraseña ha sido actualizada satisfactoriamente.
+      </p>
     </div>
 
     <div id="msg" class="msg"></div>
@@ -329,7 +352,7 @@
       if (p1.length < 6) return showMsg("La contraseña es muy corta.", false);
 
       $("overlay").classList.add("show");
-      
+
       try {
         const r = await new Promise((resolve, reject) => {
           google.script.run
@@ -350,7 +373,7 @@
             $("successIcon").style.opacity = "1";
             $("successIcon").style.transform = "scale(1)";
           }, 50);
-          
+
           setTimeout(() => {
             window.location.href = "<?= ScriptApp.getService().getUrl() ?>";
           }, 3000);
@@ -370,4 +393,5 @@
     });
   </script>
 </body>
+
 </html>
