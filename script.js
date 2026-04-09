@@ -51,15 +51,37 @@ if (typeof google === 'undefined' || !google.script || !google.script.run) {
 /** ===== ORIGINAL SCRIPT START ===== **/
 const $ = (id) => {
   const el = document.getElementById(id);
-  if (!el && window.DEBUG_MODE) console.warn(`[DOM] Elemento no encontrado: #${id}`);
-  return el;
+  if (el) return el;
+  if (window.DEBUG_MODE) console.warn(`[DOM] Elemento no encontrado: #${id} (usando objeto de seguridad)`);
+  // Objeto "Mock" para evitar crasheos tipo "Cannot set properties of null"
+  return {
+    style: {},
+    classList: {
+      add: () => { }, remove: () => { }, contains: () => false, toggle: () => { }
+    },
+    dataset: {},
+    get textContent() { return ""; }, set textContent(v) { },
+    get innerHTML() { return ""; }, set innerHTML(v) { },
+    get value() { return ""; }, set value(v) { },
+    addEventListener: () => { },
+    removeEventListener: () => { },
+    focus: () => { },
+    select: () => { },
+    click: () => { },
+    setAttribute: () => { },
+    getAttribute: () => null,
+    appendChild: () => { },
+    closest: () => null,
+    querySelector: () => null,
+    querySelectorAll: () => []
+  };
 };
 const safeSetText = (id, text) => {
-  const el = $(id);
+  const el = document.getElementById(id);
   if (el) el.textContent = text;
 };
 const safeSetHtml = (id, html) => {
-  const el = $(id);
+  const el = document.getElementById(id);
   if (el) el.innerHTML = html;
 };
 window.DEBUG_MODE = true;
@@ -220,7 +242,7 @@ async function loadHomeLogos() {
           if (r.LOGO_B && $("logoB")) $("logoB").src = r.LOGO_B;
         }
       })
-      .withFailureHandler(err => console.warn("Fallo al precargar logos (backend antiguo o CORS):", err))
+      .withFailureHandler(err => console.log("Logos no disponibles en este entorno (es normal si el backend es antiguo)"))
       .api({ action: "getLogos" });
   } catch (e) {
     console.warn("Error cargando logos:", e);
