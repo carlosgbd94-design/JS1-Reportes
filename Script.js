@@ -2775,7 +2775,7 @@
 
 // Script.js
 
-// Pega aquí la URL del nuevo despliegue de tu Apps Script
+// Pega aquí la URL de tu Apps Script
 const API_URL = "https://script.google.com/macros/s/AKfycby3en_qswj1PmE6o80nypsDM6Gw4kueRUimNSgMKJxzDojRFCsXBjFZngR9UpnkYL0n/exec"; 
 
 function apiCall(actionOrPayload, payload = {}) {
@@ -2797,18 +2797,21 @@ function apiCall(actionOrPayload, payload = {}) {
 
   return fetch(API_URL, {
     method: "POST",
-    // IMPORTANTE: el body debe ser texto (JSON.stringify)
-    body: JSON.stringify(finalPayload), 
+    body: JSON.stringify(finalPayload),
     headers: {
-      "Content-Type": "text/plain;charset=utf-8", 
+      "Content-Type": "text/plain;charset=utf-8" // Vital para evitar el bloqueo de CORS
     }
   })
-  .then(res => {
-    if (!res.ok) throw new Error("Error de red o servidor al comunicar con Apps Script");
-    return res.json();
+  .then(res => res.text()) // Leemos la respuesta como texto primero
+  .then(text => {
+    try {
+      return JSON.parse(text); // Intentamos convertirlo a JSON
+    } catch (err) {
+      console.error("Respuesta fallida de Google:", text);
+      throw new Error("Google bloqueó la conexión. Revisa que el script sea público (Cualquier persona).");
+    }
   })
   .then(data => {
-    // Si Apps Script manda error interno
     if (data.error) throw new Error(data.error); 
     return data;
   });
