@@ -2776,7 +2776,7 @@
 // Script.js
 
 // Pega aquí la URL del nuevo despliegue de tu Apps Script
-const API_URL = "LA_URL_DE_TU_APPS_SCRIPT_AQUI"; 
+const API_URL = "https://script.google.com/macros/s/AKfycby3en_qswj1PmE6o80nypsDM6Gw4kueRUimNSgMKJxzDojRFCsXBjFZngR9UpnkYL0n/exec"; 
 
 function apiCall(actionOrPayload, payload = {}) {
   let finalPayload = {};
