@@ -117,6 +117,10 @@
                 <span class="material-symbols-rounded">cloud_upload</span> Subir archivos
               </button>
 
+              <button class="iconbtn" id="btnViewSupervisions" title="Historial de supervisiones" style="display:none">
+                <span class="material-symbols-rounded">history</span> Historial
+              </button>
+
               <button class="iconbtn" id="btnTopNotifications" type="button" style="display:none">
                 <div class="badge-wrapper">
                   <span class="material-symbols-rounded">notifications</span>
@@ -166,7 +170,7 @@
                       <span class="material-symbols-rounded">done_all</span>
                     </button>
 
-                    <button type="button" class="ghostBtn" id="btnTopNotifClose" title="Cerrar panel">
+                    <button type="button" class="md-btn-icon btn-close" id="btnTopNotifClose" title="Cerrar panel">
                       <span class="material-symbols-rounded">close</span>
                     </button>
                   </div>
@@ -386,8 +390,9 @@
                   <button class="ghostBtn" id="btnEditSR" style="display:none" title="Editar la existencia de hoy">
                     <span class="material-symbols-rounded">edit_square</span> Editar existencia de hoy
                   </button>
-                  <button class="ghostBtn" id="btnCancelEditSR" style="display:none" title="Cancelar edición">
-                    <span class="material-symbols-rounded">close</span> Cancelar edición
+                  <button class="md-btn-icon btn-close" id="btnCancelEditSR" style="display:none"
+                    title="Cancelar edición">
+                    <span class="material-symbols-rounded">close</span>
                   </button>
                 </div>
 
@@ -425,8 +430,9 @@
                   <button class="ghostBtn" id="btnEditCONS" style="display:none" title="Editar el reporte de hoy">
                     <span class="material-symbols-rounded">edit</span> Editar reporte de hoy
                   </button>
-                  <button class="ghostBtn" id="btnCancelEditCONS" style="display:none" title="Cancelar edición">
-                    <span class="material-symbols-rounded">close</span> Cancelar edición
+                  <button class="md-btn-icon btn-close" id="btnCancelEditCONS" style="display:none"
+                    title="Cancelar edición">
+                    <span class="material-symbols-rounded">close</span>
                   </button>
                 </div>
 
@@ -495,8 +501,9 @@
                     title="Editar el pedido de biológico actual">
                     <span class="material-symbols-rounded">edit_square</span> Editar pedido actual
                   </button>
-                  <button class="ghostBtn" id="btnCancelEditBIO" style="display:none" title="Cancelar edición">
-                    <span class="material-symbols-rounded">close</span> Cancelar edición
+                  <button class="md-btn-icon btn-close" id="btnCancelEditBIO" style="display:none"
+                    title="Cancelar edición">
+                    <span class="material-symbols-rounded">close</span>
                   </button>
                 </div>
               </div>
@@ -527,11 +534,11 @@
                   </div>
 
                   <div class="modalFooter">
-                    <button class="ghostBtn" id="btnBioConfirmCancel" type="button">
+                    <button class="md-btn-action btn-close-action" id="btnBioConfirmCancel" type="button">
                       <span class="material-symbols-rounded">close</span> Corregir
                     </button>
-                    <button class="btn" id="btnBioConfirmAccept" type="button"
-                      style="margin-top:0; background:var(--warn); border-color:rgba(0,0,0,0.1);">
+                    <button class="md-btn-action btn-confirm-action" id="btnBioConfirmAccept" type="button"
+                      style="background:var(--warn); color: #000;">
                       <span class="material-symbols-rounded">done_all</span> Confirmar y Guardar
                     </button>
                   </div>
@@ -700,8 +707,8 @@
               <div class="card" id="panelCaptureSummary" style="display:none">
                 <div class="sectionTitle">
                   <h3>Resumen de captura de existencia de biológicos de hoy</h3>
-                  <button class="miniBtn" id="btnRefreshCaptureSummary" title="Actualizar resumen">
-                    <span class="material-symbols-rounded">refresh</span> Actualizar
+                  <button class="md-btn-icon" id="btnRefreshCaptureSummary" title="Actualizar resumen">
+                    <span class="material-symbols-rounded">refresh</span>
                   </button>
                 </div>
 
@@ -860,17 +867,27 @@
                 </div>
 
                 <div class="dashboardKpis">
-                  <div class="kpiCard info">
+                  <div class="dashboardCard info">
                     <div class="kpiCardLabel">Unidades evaluadas</div>
                     <div class="kpiCardValue" id="histTotalUnidades">0</div>
                   </div>
-                  <div class="kpiCard" id="kpiCardHistSR">
+                  <div class="dashboardCard" id="kpiCardHistSR">
                     <div class="kpiCardLabel">Promedio biológico</div>
                     <div class="kpiCardValue" id="histPromSR">0%</div>
                   </div>
-                  <div class="kpiCard" id="kpiCardHistCONS">
+                  <div class="dashboardCard" id="kpiCardHistCONS">
                     <div class="kpiCardLabel">Promedio consumibles</div>
                     <div class="kpiCardValue" id="histPromCONS">0%</div>
+                  </div>
+                </div>
+
+                <!-- ✅ Gráfica de comparativa histórica MD3 -->
+                <div class="adminDashboardGrid" style="margin-top: 16px; margin-bottom: 16px;">
+                  <div class="card dashboardCard" style="width: 100%;">
+                    <h4 class="dashboardCardTitle">Vistazo comparativo (BIO vs CONS)</h4>
+                    <div class="chartWrapper barWrapper" style="height: 200px; padding: 10px;">
+                      <canvas id="chartHistCompare"></canvas>
+                    </div>
                   </div>
                 </div>
 
@@ -889,11 +906,12 @@
                         <th>Capturas CONS</th>
                         <th>Faltas CONS</th>
                         <th>Última CONS</th>
+                        <th>Sup.</th>
                       </tr>
                     </thead>
                     <tbody id="historyTbody">
                       <tr>
-                        <td colspan="11" class="muted">Sin datos</td>
+                        <td colspan="12" class="muted">Sin datos</td>
                       </tr>
                     </tbody>
                   </table>
@@ -1228,25 +1246,33 @@
               gap: 12px;
               margin-bottom: 24px;
             ">
-              <div class="fieldCard" style="background: var(--md-surface-container-low); border: 1px solid var(--md-outline-variant); padding: 12px;">
+              <div class="fieldCard"
+                style="background: var(--md-surface-container-low); border: 1px solid var(--md-outline-variant); padding: 12px;">
                 <label style="margin:0 0 4px; font-size:10px; color:var(--md-sys-color-primary);">MUNICIPIO</label>
-                <div id="pinolEntregaMetaMunicipio" style="font-weight:900; font-size:14px; color:var(--md-sys-color-on-surface);">—</div>
+                <div id="pinolEntregaMetaMunicipio"
+                  style="font-weight:900; font-size:14px; color:var(--md-sys-color-on-surface);">—</div>
               </div>
-              <div class="fieldCard" style="background: var(--md-surface-container-low); border: 1px solid var(--md-outline-variant); padding: 12px;">
+              <div class="fieldCard"
+                style="background: var(--md-surface-container-low); border: 1px solid var(--md-outline-variant); padding: 12px;">
                 <label style="margin:0 0 4px; font-size:10px; color:var(--md-sys-color-primary);">CLUES</label>
-                <div id="pinolEntregaMetaClues" style="font-weight:900; font-size:14px; color:var(--md-sys-color-on-surface);">—</div>
+                <div id="pinolEntregaMetaClues"
+                  style="font-weight:900; font-size:14px; color:var(--md-sys-color-on-surface);">—</div>
               </div>
-              <div class="fieldCard" style="background: var(--md-surface-container-low); border: 1px solid var(--md-outline-variant); padding: 12px;">
+              <div class="fieldCard"
+                style="background: var(--md-surface-container-low); border: 1px solid var(--md-outline-variant); padding: 12px;">
                 <label style="margin:0 0 4px; font-size:10px; color:var(--md-sys-color-primary);">UNIDAD</label>
-                <div id="pinolEntregaMetaUnidad" style="font-weight:900; font-size:14px; color:var(--md-sys-color-on-surface);">—</div>
+                <div id="pinolEntregaMetaUnidad"
+                  style="font-weight:900; font-size:14px; color:var(--md-sys-color-on-surface);">—</div>
               </div>
             </div>
 
             <div class="fieldCard" style="background:transparent; border:none; padding:0;">
-              <label style="color:var(--md-sys-color-primary); font-weight:800; font-size:12px; margin-bottom:10px; display:block;">
+              <label
+                style="color:var(--md-sys-color-primary); font-weight:800; font-size:12px; margin-bottom:10px; display:block;">
                 COMENTARIO PARA LA UNIDAD (OPCIONAL)
               </label>
-              <textarea id="pinolEntregaComentario" placeholder="Ej: Se entregó material completo. Favor de resguardar." style="
+              <textarea id="pinolEntregaComentario" placeholder="Ej: Se entregó material completo. Favor de resguardar."
+                style="
                 min-height: 100px;
                 background: var(--md-surface-container-highest);
                 border: 1px solid var(--md-outline-variant);
@@ -1258,12 +1284,14 @@
               "></textarea>
             </div>
 
-            <div class="modalNote" style="font-size:12px; color:var(--md-sys-color-secondary); margin-top:16px; background:var(--md-surface-container-low); padding:10px; border-radius:12px; border-left:4px solid #166534;">
+            <div class="modalNote"
+              style="font-size:12px; color:var(--md-sys-color-secondary); margin-top:16px; background:var(--md-surface-container-low); padding:10px; border-radius:12px; border-left:4px solid #166534;">
               Este mensaje se enviará como notificación inmediata a la unidad seleccionada.
             </div>
 
             <div class="modalFooter" style="margin-top:32px; display:flex; justify-content:flex-end; gap:12px;">
-              <button class="ghostBtn" id="btnCancelarEntregaPinol" type="button" style="font-weight:700; border:none; background:transparent;">
+              <button class="ghostBtn" id="btnCancelarEntregaPinol" type="button"
+                style="font-weight:700; border:none; background:transparent;">
                 <span class="material-symbols-rounded">close</span> Cancelar
               </button>
 
@@ -1409,9 +1437,8 @@
             </div>
 
             <div class="modalFooter" style="display:flex; justify-content:flex-end; gap:12px;">
-              <button class="ghostBtn" id="btnPwdClose" type="button"
-                style="display:none; border:none; background:transparent; font-weight:700;">
-                <span class="material-symbols-rounded">close</span> Cerrar
+              <button class="md-btn-icon btn-close" id="btnPwdClose" type="button" style="display:none;">
+                <span class="material-symbols-rounded">close</span>
               </button>
 
               <button class="btn" id="btnPwdSave" type="button" style="
@@ -1474,9 +1501,8 @@
             </div>
 
             <div class="modalFooter" style="margin-top:32px; display:flex; justify-content:flex-end; gap:12px;">
-              <button class="ghostBtn" id="btnForgotClose" type="button"
-                style="border:none; background:transparent; font-weight:700;">
-                <span class="material-symbols-rounded">close</span> Cerrar
+              <button class="md-btn-icon btn-close" id="btnForgotClose" type="button">
+                <span class="material-symbols-rounded">close</span>
               </button>
 
               <button class="btn" id="btnForgotSend" type="button" style="
@@ -1532,6 +1558,11 @@
                 <select id="uploadUnitSelect"></select>
               </div>
 
+              <div id="uploadSupervisionDateCard" class="fieldCard" style="display:none">
+                <label for="uploadSupervisionDate">Fecha de la supervisión</label>
+                <input type="date" id="uploadSupervisionDate">
+              </div>
+
               <div id="uploadCluesView" class="modalNote" style="display:none; color:var(--good); font-weight:700;">
                 CLUES: <span id="uploadCluesValue">—</span>
               </div>
@@ -1555,12 +1586,12 @@
             </div>
 
             <div class="modalFooter">
-              <button class="ghostBtn" id="btnCloseUpload" type="button">
-                <span class="material-symbols-rounded">close</span> Cancelar
+              <button class="md-btn-action btn-close-action" id="btnCloseUpload" type="button">
+                <span class="material-symbols-rounded">close</span> Cerrar
               </button>
 
-              <button class="btn" id="btnDoUpload" type="button" style="margin-top:0;" disabled>
-                <span class="material-symbols-rounded">publish</span> Subir a Drive
+              <button class="md-btn-action btn-confirm-action" id="btnDoUpload" type="button" disabled>
+                <span class="material-symbols-rounded">cloud_upload</span> Subir a Drive
               </button>
             </div>
           </div>
@@ -1681,11 +1712,38 @@
           </div>
 
           <div class="modalFooter">
-            <button class="ghostBtn" id="btnCancelExport" type="button">
-              <span class="material-symbols-rounded">close</span> Cancelar
+            <button class="md-btn-action btn-close-action" id="btnCancelExport" type="button">
+              <span class="material-symbols-rounded">close</span> Cerrar
             </button>
-            <button class="btn" id="btnDoExport" type="button" style="margin-top:0;">
+            <button class="md-btn-action btn-confirm-action" id="btnDoExport" type="button">
               <span class="material-symbols-rounded">download</span> Generar Reporte
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ✅ PANEL: HISTORIAL DE SUPERVISIONES MODERNO (MD3) -->
+      <div id="supervisionListOverlay" class="modern-overlay overlay">
+        <div class="modern-modal-content">
+          <div class="modalHeader">
+            <div class="modalTitleWrap">
+              <span class="material-symbols-rounded">history</span>
+              <h2 id="supListTitle">Historial de Supervisiones</h2>
+            </div>
+            <button class="md-btn-icon-only modalCloseBtn" id="btnSupListClose" type="button">
+              <span class="material-symbols-rounded">close</span>
+            </button>
+          </div>
+
+          <div class="modalBody">
+            <div id="supListContainer" class="sup-list-container">
+              <!-- Cargado dinámicamente -->
+            </div>
+          </div>
+
+          <div class="modalFooter">
+            <button class="md-btn-action btn-close-action" onclick="$('supervisionListOverlay').classList.remove('show')" type="button">
+              <span class="material-symbols-rounded">done</span> Listo
             </button>
           </div>
         </div>
