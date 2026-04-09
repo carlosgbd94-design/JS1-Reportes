@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -10,10 +9,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Reportes y existencias Jurisdicción Sanitaria 1</title>
 
-<link rel="stylesheet" href="Style.css">
-  
-  <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
-
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
@@ -25,8 +21,8 @@
 
           <div class="brandMain">
             <div class="logoBadge" aria-label="Logos institucionales">
-              <img id="logoA" src="https://raw.githubusercontent.com/carlosgbd94-design/Logos/910b6a26a851790265ab2b5cb21d1e5759e239d3/Seseq_vertical_2025.png" alt="SESEQ">
-              <img id="logoB" src="https://raw.githubusercontent.com/carlosgbd94-design/Logos/refs/heads/main/logo_Q.png" alt="Gobierno de Querétaro">
+              <img id="logoA" src="" alt="SESEQ">
+              <img id="logoB" src="" alt="Gobierno de Querétaro">
             </div>
 
             <div class="brandText">
@@ -118,10 +114,6 @@
                 <span class="material-symbols-rounded">cloud_upload</span> Subir archivos
               </button>
 
-              <button class="iconbtn" id="btnViewSupervisions" title="Historial de supervisiones" style="display:none">
-                <span class="material-symbols-rounded">history</span> Historial
-              </button>
-
               <button class="iconbtn" id="btnTopNotifications" type="button" style="display:none">
                 <div class="badge-wrapper">
                   <span class="material-symbols-rounded">notifications</span>
@@ -171,7 +163,7 @@
                       <span class="material-symbols-rounded">done_all</span>
                     </button>
 
-                    <button type="button" class="md-btn-icon btn-close" id="btnTopNotifClose" title="Cerrar panel">
+                    <button type="button" class="ghostBtn" id="btnTopNotifClose" title="Cerrar panel">
                       <span class="material-symbols-rounded">close</span>
                     </button>
                   </div>
@@ -391,9 +383,8 @@
                   <button class="ghostBtn" id="btnEditSR" style="display:none" title="Editar la existencia de hoy">
                     <span class="material-symbols-rounded">edit_square</span> Editar existencia de hoy
                   </button>
-                  <button class="md-btn-icon btn-close" id="btnCancelEditSR" style="display:none"
-                    title="Cancelar edición">
-                    <span class="material-symbols-rounded">close</span>
+                  <button class="ghostBtn" id="btnCancelEditSR" style="display:none" title="Cancelar edición">
+                    <span class="material-symbols-rounded">close</span> Cancelar edición
                   </button>
                 </div>
 
@@ -431,9 +422,8 @@
                   <button class="ghostBtn" id="btnEditCONS" style="display:none" title="Editar el reporte de hoy">
                     <span class="material-symbols-rounded">edit</span> Editar reporte de hoy
                   </button>
-                  <button class="md-btn-icon btn-close" id="btnCancelEditCONS" style="display:none"
-                    title="Cancelar edición">
-                    <span class="material-symbols-rounded">close</span>
+                  <button class="ghostBtn" id="btnCancelEditCONS" style="display:none" title="Cancelar edición">
+                    <span class="material-symbols-rounded">close</span> Cancelar edición
                   </button>
                 </div>
 
@@ -502,9 +492,8 @@
                     title="Editar el pedido de biológico actual">
                     <span class="material-symbols-rounded">edit_square</span> Editar pedido actual
                   </button>
-                  <button class="md-btn-icon btn-close" id="btnCancelEditBIO" style="display:none"
-                    title="Cancelar edición">
-                    <span class="material-symbols-rounded">close</span>
+                  <button class="ghostBtn" id="btnCancelEditBIO" style="display:none" title="Cancelar edición">
+                    <span class="material-symbols-rounded">close</span> Cancelar edición
                   </button>
                 </div>
               </div>
@@ -535,11 +524,11 @@
                   </div>
 
                   <div class="modalFooter">
-                    <button class="md-btn-action btn-close-action" id="btnBioConfirmCancel" type="button">
+                    <button class="ghostBtn" id="btnBioConfirmCancel" type="button">
                       <span class="material-symbols-rounded">close</span> Corregir
                     </button>
-                    <button class="md-btn-action btn-confirm-action" id="btnBioConfirmAccept" type="button"
-                      style="background:var(--warn); color: #000;">
+                    <button class="btn" id="btnBioConfirmAccept" type="button"
+                      style="margin-top:0; background:var(--warn); border-color:rgba(0,0,0,0.1);">
                       <span class="material-symbols-rounded">done_all</span> Confirmar y Guardar
                     </button>
                   </div>
@@ -708,8 +697,8 @@
               <div class="card" id="panelCaptureSummary" style="display:none">
                 <div class="sectionTitle">
                   <h3>Resumen de captura de existencia de biológicos de hoy</h3>
-                  <button class="md-btn-icon" id="btnRefreshCaptureSummary" title="Actualizar resumen">
-                    <span class="material-symbols-rounded">refresh</span>
+                  <button class="miniBtn" id="btnRefreshCaptureSummary" title="Actualizar resumen">
+                    <span class="material-symbols-rounded">refresh</span> Actualizar
                   </button>
                 </div>
 
@@ -750,25 +739,6 @@
                   <div class="kpiCard warn" id="kpiCardFaltantes">
                     <div class="kpiCardLabel">Faltantes</div>
                     <div class="kpiCardValue" id="sumFaltantes">0</div>
-                  </div>
-                </div>
-
-                <!-- ✅ NUEVO DASHBOARD EJECUTIVO VISUAL -->
-                <div class="adminDashboardGrid">
-                  <!-- Cumplimiento Card -->
-                  <div class="card kpiCard dashboardCard">
-                    <h4 class="dashboardCardTitle">Cumplimiento Operativo</h4>
-                    <div class="chartWrapper doughnutWrapper">
-                      <canvas id="chartCompliance"></canvas>
-                      <div id="compliancePctVal" class="chartCenterValue">0%</div>
-                    </div>
-                  </div>
-                  <!-- Capturas Card -->
-                  <div class="card kpiCard dashboardCard">
-                    <h4 class="dashboardCardTitle">Estado de Capturas</h4>
-                    <div class="chartWrapper barWrapper">
-                      <canvas id="chartCapturas"></canvas>
-                    </div>
                   </div>
                 </div>
 
@@ -868,27 +838,17 @@
                 </div>
 
                 <div class="dashboardKpis">
-                  <div class="dashboardCard info">
+                  <div class="kpiCard info">
                     <div class="kpiCardLabel">Unidades evaluadas</div>
                     <div class="kpiCardValue" id="histTotalUnidades">0</div>
                   </div>
-                  <div class="dashboardCard" id="kpiCardHistSR">
+                  <div class="kpiCard" id="kpiCardHistSR">
                     <div class="kpiCardLabel">Promedio biológico</div>
                     <div class="kpiCardValue" id="histPromSR">0%</div>
                   </div>
-                  <div class="dashboardCard" id="kpiCardHistCONS">
+                  <div class="kpiCard" id="kpiCardHistCONS">
                     <div class="kpiCardLabel">Promedio consumibles</div>
                     <div class="kpiCardValue" id="histPromCONS">0%</div>
-                  </div>
-                </div>
-
-                <!-- ✅ Gráfica de comparativa histórica MD3 -->
-                <div class="adminDashboardGrid" style="margin-top: 16px; margin-bottom: 16px;">
-                  <div class="card dashboardCard" style="width: 100%;">
-                    <h4 class="dashboardCardTitle">Vistazo comparativo (BIO vs CONS)</h4>
-                    <div class="chartWrapper barWrapper" style="height: 200px; padding: 10px;">
-                      <canvas id="chartHistCompare"></canvas>
-                    </div>
                   </div>
                 </div>
 
@@ -907,12 +867,11 @@
                         <th>Capturas CONS</th>
                         <th>Faltas CONS</th>
                         <th>Última CONS</th>
-                        <th>Sup.</th>
                       </tr>
                     </thead>
                     <tbody id="historyTbody">
                       <tr>
-                        <td colspan="12" class="muted">Sin datos</td>
+                        <td colspan="11" class="muted">Sin datos</td>
                       </tr>
                     </tbody>
                   </table>
@@ -1217,20 +1176,7 @@
       <div class="pinolModal" id="pinolEntregaModal">
         <div class="modalGlass" style="max-width:600px; border-radius:28px;">
           <div class="modalHead">
-            <div class="modalEyebrow" style="
-              background: #dcfce7;
-              color: #166534;
-              padding: 6px 14px;
-              border-radius: 12px;
-              display: inline-flex;
-              align-items: center;
-              gap: 8px;
-              font-weight: 800;
-              font-size: 11px;
-              text-transform: uppercase;
-              letter-spacing: 0.05em;
-              margin-bottom: 12px;
-            ">
+            <div class="modalEyebrow modal-eyebrow-variant modal-eyebrow-success">
               <span class="material-symbols-rounded" style="font-size:18px;">inventory_2</span>
               Gestión de Insumos
             </div>
@@ -1241,29 +1187,18 @@
           </div>
 
           <div class="modalBody" style="padding-top:20px;">
-            <div class="pinolModalMeta" style="
-              display: grid;
-              grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-              gap: 12px;
-              margin-bottom: 24px;
-            ">
-              <div class="fieldCard"
-                style="background: var(--md-surface-container-low); border: 1px solid var(--md-outline-variant); padding: 12px;">
-                <label style="margin:0 0 4px; font-size:10px; color:var(--md-sys-color-primary);">MUNICIPIO</label>
-                <div id="pinolEntregaMetaMunicipio"
-                  style="font-weight:900; font-size:14px; color:var(--md-sys-color-on-surface);">—</div>
+            <div class="pinolModalMeta modal-inner-grid">
+              <div class="fieldCard field-card-flat">
+                <label>MUNICIPIO</label>
+                <div id="pinolEntregaMetaMunicipio" class="value">—</div>
               </div>
-              <div class="fieldCard"
-                style="background: var(--md-surface-container-low); border: 1px solid var(--md-outline-variant); padding: 12px;">
-                <label style="margin:0 0 4px; font-size:10px; color:var(--md-sys-color-primary);">CLUES</label>
-                <div id="pinolEntregaMetaClues"
-                  style="font-weight:900; font-size:14px; color:var(--md-sys-color-on-surface);">—</div>
+              <div class="fieldCard field-card-flat">
+                <label>CLUES</label>
+                <div id="pinolEntregaMetaClues" class="value">—</div>
               </div>
-              <div class="fieldCard"
-                style="background: var(--md-surface-container-low); border: 1px solid var(--md-outline-variant); padding: 12px;">
-                <label style="margin:0 0 4px; font-size:10px; color:var(--md-sys-color-primary);">UNIDAD</label>
-                <div id="pinolEntregaMetaUnidad"
-                  style="font-weight:900; font-size:14px; color:var(--md-sys-color-on-surface);">—</div>
+              <div class="fieldCard field-card-flat">
+                <label>UNIDAD</label>
+                <div id="pinolEntregaMetaUnidad" class="value">—</div>
               </div>
             </div>
 
@@ -1272,21 +1207,10 @@
                 style="color:var(--md-sys-color-primary); font-weight:800; font-size:12px; margin-bottom:10px; display:block;">
                 COMENTARIO PARA LA UNIDAD (OPCIONAL)
               </label>
-              <textarea id="pinolEntregaComentario" placeholder="Ej: Se entregó material completo. Favor de resguardar."
-                style="
-                min-height: 100px;
-                background: var(--md-surface-container-highest);
-                border: 1px solid var(--md-outline-variant);
-                border-radius: 16px;
-                padding: 14px;
-                font-size: 15px;
-                width: 100%;
-                resize: none;
-              "></textarea>
+              <textarea id="pinolEntregaComentario" class="modal-textarea-standard" placeholder="Ej: Se entregó material completo. Favor de resguardar."></textarea>
             </div>
 
-            <div class="modalNote"
-              style="font-size:12px; color:var(--md-sys-color-secondary); margin-top:16px; background:var(--md-surface-container-low); padding:10px; border-radius:12px; border-left:4px solid #166534;">
+            <div class="modalNote modal-note-accent">
               Este mensaje se enviará como notificación inmediata a la unidad seleccionada.
             </div>
 
@@ -1296,18 +1220,7 @@
                 <span class="material-symbols-rounded">close</span> Cancelar
               </button>
 
-              <button class="btn" id="btnConfirmarEntregaPinol" type="button" style="
-                background: linear-gradient(135deg, #166534 0%, #15803d 100%);
-                color: #ffffff;
-                padding: 12px 28px;
-                border: none;
-                border-radius: 14px;
-                font-weight: 800;
-                box-shadow: 0 4px 12px rgba(22, 101, 52, 0.25);
-                display: flex;
-                align-items: center;
-                gap: 8px;
-              ">
+              <button class="btn btn-gradient-success" id="btnConfirmarEntregaPinol" type="button">
                 <span class="material-symbols-rounded">check_circle</span>
                 Confirmar entrega y notificar
               </button>
@@ -1330,20 +1243,7 @@
       <div class="overlay" id="passwordOverlay">
         <div class="modalGlass" style="max-width:480px; border-radius:28px;">
           <div class="modalHead">
-            <div class="modalEyebrow" style="
-              background: var(--md-sys-color-primary-container);
-              color: var(--md-sys-color-on-primary-container);
-              padding: 6px 14px;
-              border-radius: 12px;
-              display: inline-flex;
-              align-items: center;
-              gap: 8px;
-              font-weight: 800;
-              font-size: 11px;
-              text-transform: uppercase;
-              letter-spacing: 0.05em;
-              margin-bottom: 12px;
-            ">
+            <div class="modalEyebrow modal-eyebrow-variant modal-eyebrow-primary">
               <span class="material-symbols-rounded" style="font-size:18px;">security</span>
               Seguridad de la cuenta
             </div>
@@ -1361,14 +1261,7 @@
                   style="color:var(--md-sys-color-primary); font-weight:800; font-size:12px; margin-bottom:8px; display:block;">CONTRASEÑA
                   ACTUAL</label>
                 <div class="pwdWrap" style="position:relative;">
-                  <input id="pwdCurrent" type="password" placeholder="Contraseña actual" style="
-                    background: var(--md-surface-container-highest);
-                    border: 1px solid var(--md-outline-variant);
-                    border-radius: 12px;
-                    padding: 14px;
-                    font-size: 16px;
-                    width: 100%;
-                  ">
+                  <input id="pwdCurrent" type="password" placeholder="Contraseña actual" class="modal-input-standard">
                   <button type="button" class="pwdToggle" data-target="pwdCurrent"
                     style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--md-sys-color-primary);">
                     <span class="material-symbols-rounded">visibility</span>
@@ -1381,14 +1274,7 @@
                   style="color:var(--md-sys-color-primary); font-weight:800; font-size:12px; margin-bottom:8px; display:block;">NUEVA
                   CONTRASEÑA</label>
                 <div class="pwdWrap" style="position:relative;">
-                  <input id="pwdNew" type="password" placeholder="Nueva contraseña" style="
-                    background: var(--md-surface-container-highest);
-                    border: 1px solid var(--md-outline-variant);
-                    border-radius: 12px;
-                    padding: 14px;
-                    font-size: 16px;
-                    width: 100%;
-                  ">
+                  <input id="pwdNew" type="password" placeholder="Nueva contraseña" class="modal-input-standard">
                   <button type="button" class="pwdToggle" data-target="pwdNew"
                     style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--md-sys-color-primary);">
                     <span class="material-symbols-rounded">visibility</span>
@@ -1401,14 +1287,7 @@
                   style="color:var(--md-sys-color-primary); font-weight:800; font-size:12px; margin-bottom:8px; display:block;">CONFIRMAR
                   NUEVA</label>
                 <div class="pwdWrap" style="position:relative;">
-                  <input id="pwdConfirm" type="password" placeholder="Confirmar nueva contraseña" style="
-                    background: var(--md-surface-container-highest);
-                    border: 1px solid var(--md-outline-variant);
-                    border-radius: 12px;
-                    padding: 14px;
-                    font-size: 16px;
-                    width: 100%;
-                  ">
+                  <input id="pwdConfirm" type="password" placeholder="Confirmar nueva contraseña" class="modal-input-standard">
                   <button type="button" class="pwdToggle" data-target="pwdConfirm"
                     style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--md-sys-color-primary);">
                     <span class="material-symbols-rounded">visibility</span>
@@ -1420,37 +1299,22 @@
                 <label
                   style="color:var(--md-sys-color-primary); font-weight:800; font-size:12px; margin-bottom:8px; display:block;">CORREO
                   DE RECUPERACIÓN</label>
-                <input id="myEmail" type="email" placeholder="nombre@correo.com" style="
-                  background: var(--md-surface-container-highest);
-                  border: 1px solid var(--md-outline-variant);
-                  border-radius: 12px;
-                  padding: 14px;
-                  font-size: 16px;
-                  width: 100%;
-                ">
+                <input id="myEmail" type="email" placeholder="nombre@correo.com" class="modal-input-standard">
               </div>
 
             </div>
 
-            <div class="modalNote"
-              style="font-size:13px; color:var(--md-sys-color-secondary); margin:20px 0; background:var(--md-sys-color-surface-container-low); padding:12px; border-radius:12px; border-left:4px solid var(--md-sys-color-primary);">
+            <div class="modalNote modal-note-primary">
               Usa un correo al que sí tengas acceso. Ahí se enviará tu enlace de recuperación si olvidas la contraseña.
             </div>
 
             <div class="modalFooter" style="display:flex; justify-content:flex-end; gap:12px;">
-              <button class="md-btn-icon btn-close" id="btnPwdClose" type="button" style="display:none;">
-                <span class="material-symbols-rounded">close</span>
+              <button class="ghostBtn" id="btnPwdClose" type="button"
+                style="display:none; border:none; background:transparent; font-weight:700;">
+                <span class="material-symbols-rounded">close</span> Cerrar
               </button>
 
-              <button class="btn" id="btnPwdSave" type="button" style="
-                background: linear-gradient(135deg, #001B3D 0%, #003366 100%);
-                color: #ffffff;
-                padding: 12px 24px;
-                border: none;
-                border-radius: 12px;
-                font-weight: 800;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-              ">
+              <button class="btn btn-gradient-primary" id="btnPwdSave" type="button">
                 Guardar y Continuar
               </button>
             </div>
@@ -1461,20 +1325,7 @@
       <div class="modalOverlay" id="forgotOverlay">
         <div class="modalGlass" style="max-width:440px; border-radius:28px;">
           <div class="modalHead">
-            <div class="modalEyebrow" style="
-              background: var(--md-sys-color-primary-container);
-              color: var(--md-sys-color-on-primary-container);
-              padding: 6px 14px;
-              border-radius: 12px;
-              display: inline-flex;
-              align-items: center;
-              gap: 8px;
-              font-weight: 800;
-              font-size: 11px;
-              text-transform: uppercase;
-              letter-spacing: 0.05em;
-              margin-bottom: 12px;
-            ">
+            <div class="modalEyebrow modal-eyebrow-variant modal-eyebrow-primary">
               <span class="material-symbols-rounded" style="font-size:18px;">mail</span>
               Recuperación
             </div>
@@ -1490,31 +1341,17 @@
               <div class="fieldCard" style="background:transparent; border:none; padding:0;">
                 <label
                   style="color:var(--md-sys-color-primary); font-weight:800; font-size:12px; margin-bottom:8px; display:block;">USUARIO</label>
-                <input id="forgotUsuario" type="text" placeholder="Tu usuario" style="
-                  background: var(--md-surface-container-highest);
-                  border: 1px solid var(--md-outline-variant);
-                  border-radius: 12px;
-                  padding: 14px;
-                  font-size: 16px;
-                  width: 100%;
-                ">
+                <input id="forgotUsuario" type="text" placeholder="Tu usuario" class="modal-input-standard">
               </div>
             </div>
 
             <div class="modalFooter" style="margin-top:32px; display:flex; justify-content:flex-end; gap:12px;">
-              <button class="md-btn-icon btn-close" id="btnForgotClose" type="button">
-                <span class="material-symbols-rounded">close</span>
+              <button class="ghostBtn" id="btnForgotClose" type="button"
+                style="border:none; background:transparent; font-weight:700;">
+                <span class="material-symbols-rounded">close</span> Cerrar
               </button>
 
-              <button class="btn" id="btnForgotSend" type="button" style="
-                background: linear-gradient(135deg, #001B3D 0%, #003366 100%);
-                color: #ffffff;
-                padding: 12px 24px;
-                border: none;
-                border-radius: 12px;
-                font-weight: 800;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-              ">
+              <button class="btn btn-gradient-primary" id="btnForgotSend" type="button">
                 Enviar enlace
               </button>
             </div>
@@ -1559,11 +1396,6 @@
                 <select id="uploadUnitSelect"></select>
               </div>
 
-              <div id="uploadSupervisionDateCard" class="fieldCard" style="display:none">
-                <label for="uploadSupervisionDate">Fecha de la supervisión</label>
-                <input type="date" id="uploadSupervisionDate">
-              </div>
-
               <div id="uploadCluesView" class="modalNote" style="display:none; color:var(--good); font-weight:700;">
                 CLUES: <span id="uploadCluesValue">—</span>
               </div>
@@ -1587,12 +1419,12 @@
             </div>
 
             <div class="modalFooter">
-              <button class="md-btn-action btn-close-action" id="btnCloseUpload" type="button">
-                <span class="material-symbols-rounded">close</span> Cerrar
+              <button class="ghostBtn" id="btnCloseUpload" type="button">
+                <span class="material-symbols-rounded">close</span> Cancelar
               </button>
 
-              <button class="md-btn-action btn-confirm-action" id="btnDoUpload" type="button" disabled>
-                <span class="material-symbols-rounded">cloud_upload</span> Subir a Drive
+              <button class="btn" id="btnDoUpload" type="button" style="margin-top:0;" disabled>
+                <span class="material-symbols-rounded">publish</span> Subir a Drive
               </button>
             </div>
           </div>
@@ -1713,50 +1545,21 @@
           </div>
 
           <div class="modalFooter">
-            <button class="md-btn-action btn-close-action" id="btnCancelExport" type="button">
-              <span class="material-symbols-rounded">close</span> Cerrar
+            <button class="ghostBtn" id="btnCancelExport" type="button">
+              <span class="material-symbols-rounded">close</span> Cancelar
             </button>
-            <button class="md-btn-action btn-confirm-action" id="btnDoExport" type="button">
+            <button class="btn" id="btnDoExport" type="button" style="margin-top:0;">
               <span class="material-symbols-rounded">download</span> Generar Reporte
             </button>
           </div>
         </div>
       </div>
 
-      <!-- ✅ PANEL: HISTORIAL DE SUPERVISIONES MODERNO (MD3) -->
-      <div id="supervisionListOverlay" class="modern-overlay overlay">
-        <div class="modern-modal-content">
-          <div class="modalHeader">
-            <div class="modalTitleWrap">
-              <span class="material-symbols-rounded">history</span>
-              <h2 id="supListTitle">Historial de Supervisiones</h2>
-            </div>
-            <button class="md-btn-icon-only modalCloseBtn" id="btnSupListClose" type="button">
-              <span class="material-symbols-rounded">close</span>
-            </button>
-          </div>
-
-          <div class="modalBody">
-            <div id="supListContainer" class="sup-list-container">
-              <!-- Cargado dinámicamente -->
-            </div>
-          </div>
-
-          <div class="modalFooter">
-            <button class="md-btn-action btn-close-action" onclick="$('supervisionListOverlay').classList.remove('show')" type="button">
-              <span class="material-symbols-rounded">done</span> Listo
-            </button>
-          </div>
-        </div>
-      </div>
-
       <div class="appFooter">
-        &copy;
-        <?= new Date().getFullYear() ?> JS1 Reportes | Desarrollado por <a href="mailto:carlosgbd94@gmail.com"
-          style="color:inherit;text-decoration:underline;">carlosgbd94@gmail.com</a>
+        &copy; 2026 JS1 Reportes | Desarrollado por <a href="mailto:carlosgbd94@gmail.com" style="color:inherit;text-decoration:underline;">carlosgbd94@gmail.com</a>
       </div>
 
-      <script src="Script.js"></script>
+      <script src="script.js"></script>
 
 </body>
 
