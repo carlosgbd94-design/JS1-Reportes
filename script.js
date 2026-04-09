@@ -54,6 +54,14 @@ const $ = (id) => {
   if (!el && window.DEBUG_MODE) console.warn(`[DOM] Elemento no encontrado: #${id}`);
   return el;
 };
+const safeSetText = (id, text) => {
+  const el = $(id);
+  if (el) el.textContent = text;
+};
+const safeSetHtml = (id, html) => {
+  const el = $(id);
+  if (el) el.innerHTML = html;
+};
 window.DEBUG_MODE = true;
 
 // Configuración para Vercel
@@ -61,13 +69,45 @@ const urlParams = new URLSearchParams(window.location.search);
 window.PAGE_MODE = urlParams.get('mode') || "";
 window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycby3en_qswj1PmE6o80nypsDM6Gw4kueRUimNSgMKJxzDojRFCsXBjFZngR9UpnkYL0n/exec";
 
-// --- ESTADO GLOBAL (Mantenido al inicio para evitar ReferenceError) ---
+// --- ESTADO GLOBAL (Hoisted para evitar ReferenceError en bundle) ---
 let TOKEN = localStorage.getItem("JS1_TOKEN") || "";
 let USER = null;
 let STATUS = null;
 let UNIT_CATALOG = [];
 let LIVE_TIMERS_STARTED = false;
 let LIVE_TIMERS = [];
+let TODAY_CACHE = null;
+
+const APP_STATE = {
+  initialized: false,
+  isMobile: false,
+  isLowPerf: false,
+  mainPanel: "CAP",
+  captureTab: "SR",
+  opsTab: "SUMMARY",
+  todayCache: null,
+  user: null,
+  status: null,
+  token: ""
+};
+
+// Estado de Notificaciones
+let ONLY_UNREAD_NOTIFS = false;
+// ... (mismo bloque que antes)
+let LAST_NOTIF_UNREAD = 0;
+let NOTIF_AUTO_REFRESH_TIMER = null;
+let NOTIF_SEARCH_QUERY = "";
+let NOTIF_LOAD_PROMISE = null;
+let NOTIF_GROUPS_COLLAPSED = {
+  pendientes: false,
+  confirmadas: false,
+  historial: true
+};
+const NOTIF_PREF_KEYS = {
+  onlyUnread: "js1_notif_only_unread",
+  search: "js1_notif_search",
+  groups: "js1_notif_groups"
+};
 
 // Elementos de UI globales (mapeados al inicio)
 let overlay, overlayMsg, toast, toastMsg, overlayTitle;
@@ -170,9 +210,9 @@ async function loadHomeLogos() {
 
 
   function showOverlay(msg = "Cargando…", title = "Procesando") {
-    if (overlayTitle) overlayTitle.textContent = title;
-    if (overlayMsg) overlayMsg.textContent = msg;
-    overlay.classList.add("show");
+    safeSetText("overlayTitle", title);
+    safeSetText("overlayMsg", msg);
+    if (overlay) overlay.classList.add("show");
   }
 
   function hideOverlay() {
@@ -255,7 +295,7 @@ async function loadHomeLogos() {
     LIVE_STATE.toastMeta.ts = now;
     LIVE_STATE.lastToastKey = toastKey;
 
-    toastMsg.textContent = cleanMsg;
+    safeSetText("toastMsg", cleanMsg);
     toast.classList.remove("good", "bad", "warn");
     toast.classList.add(finalType);
 
@@ -440,9 +480,7 @@ async function loadHomeLogos() {
       }
       badge.classList.toggle("notifHot", warn > 0);
 
-      if (txt.textContent !== nextText) {
-        txt.textContent = nextText;
-      }
+      safeSetText("notifTxt", nextText);
 
       pulseBadge("bNotif");
 
@@ -457,9 +495,7 @@ async function loadHomeLogos() {
     }
     badge.classList.remove("notifHot", "liveAccent", "pulse", "warn");
 
-    if (txt.textContent !== "Actividad: 0") {
-      txt.textContent = "Actividad: 0";
-    }
+    safeSetText("notifTxt", "Actividad: 0");
 
     if (btnClear && btnClear.style.display !== "none") {
       btnClear.style.display = "none";
@@ -485,22 +521,6 @@ async function loadHomeLogos() {
     updateNotifBadge();
   }
 
-  let ONLY_UNREAD_NOTIFS = false;
-  let LAST_NOTIF_UNREAD = 0;
-  let NOTIF_AUTO_REFRESH_TIMER = null;
-  let NOTIF_SEARCH_QUERY = "";
-  let NOTIF_LOAD_PROMISE = null;
-  let NOTIF_GROUPS_COLLAPSED = {
-    pendientes: false,
-    confirmadas: false,
-    historial: true
-  };
-
-  const NOTIF_PREF_KEYS = {
-    onlyUnread: "js1_notif_only_unread",
-    search: "js1_notif_search",
-    groups: "js1_notif_groups"
-  };
 
   function startNotificationsAutoRefresh() {
     stopNotificationsAutoRefresh();
@@ -1039,7 +1059,7 @@ async function loadHomeLogos() {
 
     const totalKpi = $(totalKpiId);
     if (totalKpi) {
-      totalKpi.textContent = String(filteredItems.length);
+      safeSetText(totalKpiId, String(filteredItems.length));
     }
   }
 
@@ -1069,11 +1089,11 @@ async function loadHomeLogos() {
     if (badge) {
       if (n > 0) {
         if (badge.style.display !== "inline-flex") badge.style.display = "inline-flex";
-        if (badge.textContent !== nextText) badge.textContent = nextText;
+        safeSetText("notifBadgeMain", nextText);
         tabNOTIFS?.classList.add("liveAccent");
       } else {
         if (badge.style.display !== "none") badge.style.display = "none";
-        if (badge.textContent !== "0") badge.textContent = "0";
+        safeSetText("notifBadgeMain", "0");
         tabNOTIFS?.classList.remove("liveAccent", "notifHot");
       }
     }
@@ -1081,11 +1101,11 @@ async function loadHomeLogos() {
     if (topBadge) {
       if (n > 0) {
         if (topBadge.style.display !== "inline-flex") topBadge.style.display = "inline-flex";
-        if (topBadge.textContent !== nextText) topBadge.textContent = nextText;
+        safeSetText("topNotifBadge", nextText);
         btnTopNotifications?.classList.add("liveAccent", "notifHot");
       } else {
         if (topBadge.style.display !== "none") topBadge.style.display = "none";
-        if (topBadge.textContent !== "0") topBadge.textContent = "0";
+        safeSetText("topNotifBadge", "0");
         btnTopNotifications?.classList.remove("liveAccent", "notifHot");
       }
     }
@@ -3549,20 +3569,6 @@ async function loadHomeLogos() {
     }
   });
 
-  const APP_STATE = {
-    user: null,
-    status: null,
-    token: "",
-    todayCache: null,
-    mainPanel: "CAP",
-    captureTab: "SR",
-    opsTab: "SUMMARY",
-    isMobile: false,
-    isLowPerf: false,
-    lastLoginUser: "",
-    initialized: false
-  };
-
   function syncAppState(partial = {}) {
     Object.assign(APP_STATE, partial);
     return APP_STATE;
@@ -4226,7 +4232,6 @@ async function loadHomeLogos() {
   let EDIT_SR = false;
   let EDIT_CONS = false;
   let EDIT_BIO = false;
-  let TODAY_CACHE = null;
 
   let ORIGINAL_SR = null;
   let ORIGINAL_CONS = null;
@@ -5032,8 +5037,8 @@ async function loadHomeLogos() {
     const capturadas = data?.capturadas || [];
     const faltantes = data?.faltantes || [];
 
-    $("capturadasCount").textContent = `${capturadas.length}`;
-    $("faltantesCount").textContent = `${faltantes.length}`;
+    safeSetText("capturadasCount", `${capturadas.length}`);
+    safeSetText("faltantesCount", `${faltantes.length}`);
 
     // Semáforo automático
     if ($("kpiCardFaltantes")) {
@@ -5163,14 +5168,14 @@ async function loadHomeLogos() {
     }
 
     if (user.rol === "ADMIN" || user.rol === "JURISDICCIONAL") {
-      $("munTxt").textContent = "Municipio(s): Todos";
+      if ($("munTxt")) $("munTxt").textContent = "Municipio(s): Todos";
     } else if (user.rol === "MUNICIPAL") {
-      $("munTxt").textContent = `Municipio(s): ${user.municipio || "—"}`;
+      if ($("munTxt")) $("munTxt").textContent = `Municipio(s): ${user.municipio || "—"}`;
     } else {
-      $("munTxt").textContent = `Municipio: ${user.municipio || "—"}`;
+      if ($("munTxt")) $("munTxt").textContent = `Municipio: ${user.municipio || "—"}`;
     }
     if (STATUS) {
-      $("dayTxt").textContent = formatDayBadgeMx(STATUS.today);
+      if ($("dayTxt")) $("dayTxt").textContent = formatDayBadgeMx(STATUS.today);
 
       const hora = new Date().getHours();
 
@@ -5184,7 +5189,7 @@ async function loadHomeLogos() {
         saludo = "Buenas noches 🌙 Seguimos trabajando";
       }
 
-      $("capStatus").innerHTML = `<h2 class="greetingTitle">${saludo}</h2>`;
+      safeSetHtml("capStatus", `<h2 class="greetingTitle">${saludo}</h2>`);
       paintStatusChips(STATUS);
     }
 
