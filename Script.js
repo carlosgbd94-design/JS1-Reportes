@@ -1,5 +1,79 @@
-<script>
-  const $ = (id) => document.getElementById(id);
+/** ===== VERCEL BRIDGE / GOOGLE APPS SCRIPT POLYFILL ===== **/
+if (typeof google === 'undefined' || !google.script || !google.script.run) {
+  const GAS_URL = "https://script.google.com/macros/s/AKfycby3en_qswj1PmE6o80nypsDM6Gw4kueRUimNSgMKJxzDojRFCsXBjFZngR9UpnkYL0n/exec";
+  
+  window.google = window.google || {};
+  window.google.script = window.google.script || {};
+  
+  const createPolyfillRun = () => {
+    const state = {
+      success: null,
+      failure: null
+    };
+
+    const handler = {
+      get(target, prop) {
+        if (prop === 'withSuccessHandler') {
+          return (fn) => { state.success = fn; return new Proxy(target, handler); };
+        }
+        if (prop === 'withFailureHandler') {
+          return (fn) => { state.failure = fn; return new Proxy(target, handler); };
+        }
+
+        return async (...args) => {
+          // Special case for the 'api' function used in this project
+          const payload = (prop === 'api') ? args[0] : { action: prop, payload: args[0] };
+          
+          try {
+            const response = await fetch(GAS_URL, {
+              method: 'POST',
+              body: JSON.stringify(payload),
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            });
+            const result = await response.json();
+            if (state.success) state.success(result);
+            return result;
+          } catch (err) {
+            console.error("GAS Bridge Error:", err);
+            if (state.failure) state.failure(err);
+            throw err;
+          }
+        };
+      }
+    };
+
+    return new Proxy({}, handler);
+  };
+
+  window.google.script.run = createPolyfillRun();
+}
+
+/** ===== ORIGINAL SCRIPT START ===== **/
+const $ = (id) => document.getElementById(id);
+
+// Configuración para Vercel
+const urlParams = new URLSearchParams(window.location.search);
+window.PAGE_MODE = urlParams.get('mode') || "";
+window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycby3en_qswj1PmE6o80nypsDM6Gw4kueRUimNSgMKJxzDojRFCsXBjFZngR9UpnkYL0n/exec";
+
+// Cargar logos de forma asíncrona (sustituye <?= LOGO_A ?>)
+async function loadHomeLogos() {
+  const logoA = $("logoA");
+  const logoB = $("logoB");
+  if (!logoA || !logoB) return;
+  
+  try {
+    const res = await google.script.run.api({ action: "getLogos" });
+    if (res && res.ok) {
+      if (res.LOGO_A) logoA.src = res.LOGO_A;
+      if (res.LOGO_B) logoB.src = res.LOGO_B;
+    }
+  } catch (e) {
+    console.warn("Error cargando logos:", e);
+  }
+}
+document.addEventListener("DOMContentLoaded", loadHomeLogos);
+
   const overlay = $("overlay");
   const overlayMsg = $("overlayMsg");
   const toast = $("toast");
@@ -21,30 +95,18 @@
   /* MQ3 Ripple Effect */
   function createRipple(event) {
     const button = event.currentTarget;
-    if (!button || typeof button.getBoundingClientRect !== 'function') return;
-
-    const rect = button.getBoundingClientRect();
     const circle = document.createElement("span");
     const diameter = Math.max(button.clientWidth, button.clientHeight);
     const radius = diameter / 2;
 
     circle.style.width = circle.style.height = `${diameter}px`;
-    circle.style.left = `${event.clientX - rect.left - radius}px`;
-    circle.style.top = `${event.clientY - rect.top - radius}px`;
+    circle.style.left = `${event.clientX - button.getBoundingClientRect().left - radius}px`;
+    circle.style.top = `${event.clientY - button.getBoundingClientRect().top - radius}px`;
     circle.classList.add("ripple");
 
     const ripple = button.getElementsByClassName("ripple")[0];
     if (ripple) { ripple.remove(); }
     button.appendChild(circle);
-  }
-
-  /* Robust Normalization (Removes accents, uppercase) */
-  function normalizeSearchText(text) {
-    return String(text || "")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toUpperCase()
-      .trim();
   }
 
 
@@ -114,14 +176,6 @@
     void toast.offsetWidth;
     toast.classList.add("show");
 
-    // Añade esto antes de LIVE_STATE.toastMeta.key = toastKey;
-
-    if (toast.classList.contains("show")) {
-      toast.classList.remove("show");
-      void toast.offsetWidth; // Reflow forzado
-    }
-
-
     if (TOAST_TIMER) clearTimeout(TOAST_TIMER);
     TOAST_TIMER = setTimeout(() => {
       toast.classList.remove("show");
@@ -140,7 +194,6 @@
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/\s+/g, " ");
   }
-  const normalize_ = normalizeTextKey_;
 
   function fixUtf8Text_(v) {
     let s = String(v ?? "");
@@ -253,9 +306,11 @@
   }
 
   function exposeAppFns() {
-    // Las funciones ya están expuestas globalmente o se definen en el ámbito correcto.
-    // Se mantiene esta función vacía para evitar romper llamadas existentes si las hay,
-    // o se puede eliminar si se prefiere.
+    window.getTodayReports = getTodayReports;
+    window.getCaptureOverview = getCaptureOverview;
+    window.getHistoryMetrics = getHistoryMetrics;
+    window.loadNotifications = loadNotifications;
+    window.reloadCaptureSummarySilent = reloadCaptureSummarySilent;
   }
 
   function assertCriticalFns() {
@@ -271,19 +326,6 @@
 
     if (missing.length) {
       console.error("Funciones críticas faltantes:", missing);
-    }
-  }
-
-  async function fetchWithRetry(taskFn, retries = 2, delayMs = 1000) {
-    for (let i = 0; i <= retries; i++) {
-      try {
-        return await taskFn();
-      } catch (error) {
-        const isNetworkOrTimeout = String(error.message).toLowerCase().includes("network") ||
-          String(error.message).toLowerCase().includes("timeout");
-        if (i === retries || !isNetworkOrTimeout) throw error;
-        await new Promise(res => setTimeout(res, delayMs * (i + 1))); // Backoff exponencial
-      }
     }
   }
 
@@ -668,6 +710,22 @@
     });
   }
 
+  function createDeleteButtonHtml(onclick, title = "Eliminar") {
+    return `
+      <button 
+        type="button" 
+        class="md-delete-btn" 
+        title="${escapeAttr(title)}" 
+        onclick="${onclick}"
+      >
+        <svg viewBox="0 0 24 24">
+          <path class="trash-lid" d="M15 4V3H9v1H4v2h16V4h-5z" />
+          <path d="M5 21a2 2 0 002 2h10a2 2 0 002-2V7H5v14zM8 9h2v10H8V9zm4 0h2v10h-2V9zm4 0h2v10h-2V9z" />
+        </svg>
+      </button>
+    `;
+  }
+
   function buildNotificationsHtml(items = []) {
     const arr = Array.isArray(items) ? items : [];
 
@@ -765,14 +823,7 @@
           : ``
         }
 
-          <button
-            type="button"
-            class="md-btn-action btn-delete-action icon-only"
-            title="Eliminar notificación"
-            onclick="deleteNotificationFlow('${escapeAttr(item.id || "")}')"
-          >
-            <span class="material-symbols-rounded">delete</span>
-          </button>
+          ${createDeleteButtonHtml(`deleteNotificationFlow('${escapeAttr(item.id || "")}')`, "Borrar notificación")}
         </div>
       </div>
     `;
@@ -968,17 +1019,9 @@
 
     NOTIF_LOAD_PROMISE = (async () => {
       try {
-        const res = await fetchWithRetry(() => apiCall("listMyNotifications", {
+        const res = await apiCall("listMyNotifications", {
           only_unread: ONLY_UNREAD_NOTIFS ? "SI" : "NO"
-        }));
-
-        if (!res || !res.ok) {
-          if (String(res?.error || "").includes("Sesión inválida")) {
-            performLogout("Sesión expirada.");
-            return null;
-          }
-          throw new Error(res?.error || "Error al cargar notificaciones");
-        }
+        });
 
         const data = res.data || {};
         const items = Array.isArray(data.items) ? data.items : [];
@@ -1597,16 +1640,6 @@
         if (key) toggleNotifGroup(key);
         return; // IMPORTANTE: No seguir al cierre por "clic fuera" ya que el DOM cambió
       }
-
-      window.addEventListener('offline', () => {
-        showToast("Sin conexión a internet. Espera a recuperar la señal.", false, "bad", { force: true });
-        document.body.classList.add("lowperf"); // Opcional: apaga animaciones para ahorrar batería
-      });
-
-      window.addEventListener('online', () => {
-        showToast("Conexión recuperada.", true, "good");
-        document.body.classList.remove("lowperf");
-      });
 
       // Close dropdown on outside click
       const refs = getTopNotifDropdownRefs();
@@ -2650,86 +2683,6 @@
     getNotifications: function () { return [...this._state.notifications]; }
   };
 
-  /**
-   * 📝 Drafting system: Autosave/Recovery for forms
-   */
-  const Drafting = {
-    _getDraftKey(formId) {
-      const userKey = USER ? normalize_(USER.usuario) : "anon";
-      const dateKey = todayYmdLocal();
-      return `JS1_DRAFT_${userKey}_${formId}_${dateKey}`;
-    },
-    save(formId) {
-      if (formId === "formSR" && HAS_TODAY_SR) return;
-      if (formId === "formCONS" && HAS_TODAY_CONS) return;
-
-      const container = $(formId);
-      if (!container) return;
-      const data = {};
-      const inputs = container.querySelectorAll("input, select, textarea");
-      inputs.forEach(el => {
-        if (el.id && !el.disabled && el.type !== "button" && el.type !== "submit") {
-          data[el.id] = el.value;
-        }
-      });
-
-      const hasValue = Object.values(data).some(v => String(v).trim() !== "");
-      if (hasValue) {
-        localStorage.setItem(this._getDraftKey(formId), JSON.stringify(data));
-        console.log(`📝 Borrador ${formId} guardado en localStorage`);
-      }
-    },
-    load(formId) {
-      const raw = localStorage.getItem(this._getDraftKey(formId));
-      if (!raw) return null;
-      try {
-        return JSON.parse(raw);
-      } catch (e) {
-        return null;
-      }
-    },
-    apply(formId) {
-      const data = this.load(formId);
-      if (!data) return false;
-
-      Object.keys(data).forEach(id => {
-        const el = $(id);
-        if (el) {
-          el.value = data[id];
-          el.dispatchEvent(new Event("change", { bubbles: true }));
-        }
-      });
-      syncAguja();
-      showToast("Borrador recuperado de la memoria del navegador", "info");
-      console.log(`♻️ Borrador ${formId} restaurado`);
-      return true;
-    },
-    clear(formId) {
-      localStorage.removeItem(this._getDraftKey(formId));
-      console.log(`🧹 Borrador ${formId} eliminado`);
-    },
-    checkAndNotify() {
-      ["formSR", "formCONS", "formPINOL"].forEach(fid => {
-        const data = this.load(fid);
-        if (data) {
-          const name = fid === "formSR" ? "Existencia" : fid === "formCONS" ? "Consumibles" : "Pinol";
-          showToast(`Borrador de ${name} recuperado`, true, "info");
-          this.apply(fid);
-        }
-      });
-    },
-    setupListeners() {
-      ["formSR", "formCONS", "formPINOL"].forEach(formId => {
-        const container = $(formId);
-        if (!container) return;
-        container.addEventListener("input", debounce(() => {
-          this.save(formId);
-        }, 1000));
-        container.addEventListener("change", () => this.save(formId));
-      });
-    }
-  };
-
   // NUEVO WRAPPER UI (Ejecutor Asíncrono Centralizado)
   async function executeAction(actionName, payload, loadingMsg, successMsg = null) {
     try {
@@ -2739,83 +2692,47 @@
       const res = await apiCall(actionName, payload);
 
       if (!res || !res.ok) {
-        const errMsg = (res && res.error) || "Error desconocido en el servidor.";
-
-        // HEARTBEAT: Si el servidor reporta sesión inválida, forzamos salida
-        if (errMsg.includes("Sesión inválida")) {
-          performLogout("Tu sesión ha expirado. Por seguridad, inicia sesión de nuevo.");
-          return;
-        }
-
-        throw new Error(errMsg);
+        throw new Error((res && res.error) || "Error desconocido en el servidor.");
       }
 
       if (successMsg) showToast(successMsg, "good");
       return res.data;
     } catch (error) {
-      if (!error.message.includes("Sesión inválida")) {
-        showToast(error.message, "bad");
-      }
+      showToast(error.message, "bad");
       throw error;
     } finally {
       if (loadingMsg) hideOverlay();
     }
   }
 
-  /**
-   * 🔒 Heartbeat Logout: Limpia la sesión y redirige al login
-   */
-  function performLogout(message = "Sesión cerrada") {
-    stopNotificationsAutoRefresh();
-    clearSessionCaches();
-    resetOpsPrewarmFlags();
-    setLoggedOutUI();
-    showToast(message, "info");
-  }
+  function apiCall(actionOrPayload, payload = {}) {
+    let finalPayload = {};
 
-// Script.js
+    if (typeof actionOrPayload === "string") {
+      finalPayload = Object.assign({}, payload, {
+        action: actionOrPayload,
+        token: payload.token || TOKEN
+      });
+    } else if (actionOrPayload && typeof actionOrPayload === "object") {
+      finalPayload = Object.assign({}, actionOrPayload);
+      if (!finalPayload.token) {
+        finalPayload.token = TOKEN;
+      }
+    } else {
+      return Promise.reject(new Error("Parámetros inválidos para apiCall"));
+    }
 
-// Pega aquí la URL de tu Apps Script
-const API_URL = "https://script.google.com/macros/s/AKfycby3en_qswj1PmE6o80nypsDM6Gw4kueRUimNSgMKJxzDojRFCsXBjFZngR9UpnkYL0n/exec"; 
-
-function apiCall(actionOrPayload, payload = {}) {
-  let finalPayload = {};
-
-  if (typeof actionOrPayload === "string") {
-    finalPayload = Object.assign({}, payload, {
-      action: actionOrPayload,
-      token: payload.token || TOKEN
+    return new Promise((resolve, reject) => {
+      google.script.run
+        .withSuccessHandler((res) => {
+          resolve(res);
+        })
+        .withFailureHandler((err) => {
+          reject(err instanceof Error ? err : new Error(String(err || "Error de servidor.")));
+        })
+        .api(finalPayload);
     });
-  } else if (actionOrPayload && typeof actionOrPayload === "object") {
-    finalPayload = Object.assign({}, actionOrPayload);
-    if (!finalPayload.token) {
-      finalPayload.token = TOKEN;
-    }
-  } else {
-    return Promise.reject(new Error("Parámetros inválidos para apiCall"));
   }
-
-  return fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify(finalPayload),
-    headers: {
-      "Content-Type": "text/plain;charset=utf-8" // Vital para evitar el bloqueo de CORS
-    }
-  })
-  .then(res => res.text()) // Leemos la respuesta como texto primero
-  .then(text => {
-    try {
-      return JSON.parse(text); // Intentamos convertirlo a JSON
-    } catch (err) {
-      console.error("Respuesta fallida de Google:", text);
-      throw new Error("Google bloqueó la conexión. Revisa que el script sea público (Cualquier persona).");
-    }
-  })
-  .then(data => {
-    if (data.error) throw new Error(data.error); 
-    return data;
-  });
-}
 
   const CLIENT_CACHE_PREFIX = "JS1_CACHE::";
 
@@ -3254,7 +3171,11 @@ function apiCall(actionOrPayload, payload = {}) {
     $("tabPINOL")?.addEventListener("click", () => activateCapture("PINOL"));
 
     $("btnLogout")?.addEventListener("click", () => {
-      performLogout("Sesión cerrada");
+      stopNotificationsAutoRefresh();
+      clearSessionCaches();
+      resetOpsPrewarmFlags();
+      setLoggedOutUI();
+      showToast("Sesión cerrada");
     });
   }
   function bindSummaryUiEvents() {
@@ -3332,42 +3253,6 @@ function apiCall(actionOrPayload, payload = {}) {
     applyLoginAutocomplete();
     applyCaptureNameAutocomplete();
     bindFastNumericFocus();
-    gcCache_();
-  }
-
-  /** 
-   * Recolección de basura del caché: Elimina llaves de sessionStorage 
-   * con más de 24 horas de antigüedad.
-   */
-  function gcCache_() {
-    try {
-      const now = Date.now();
-      const cutoff = 24 * 60 * 60 * 1000; // 24 horas
-      const keysToRemove = [];
-
-      for (let i = 0; i < sessionStorage.length; i++) {
-        const key = sessionStorage.key(i);
-        if (!key) continue;
-
-        try {
-          const raw = sessionStorage.getItem(key);
-          const obj = JSON.parse(raw);
-          // Si tiene timestamp (nuestro formato de cache) y ya expiró
-          if (obj && obj.ts && (now - obj.ts > cutoff)) {
-            keysToRemove.push(key);
-          }
-        } catch (e) {
-          // No es un objeto JSON de nuestro cache, ignorar
-        }
-      }
-
-      if (keysToRemove.length > 0) {
-        keysToRemove.forEach(k => sessionStorage.removeItem(k));
-        console.log(`🧹 Cache GC: Se eliminaron ${keysToRemove.length} llaves obsoletas.`);
-      }
-    } catch (e) {
-      console.warn("gcCache_ error:", e);
-    }
   }
 
   const debouncedReloadCaptureSummary = debounce(() => {
@@ -3455,7 +3340,6 @@ function apiCall(actionOrPayload, payload = {}) {
     bindSummaryUiEvents();
     bindMetricsUiEvents();
     bindCaptureUtilityEvents();
-    Drafting.setupListeners();
     runBootUiSetup();
 
     syncAppState({
@@ -3575,17 +3459,6 @@ function apiCall(actionOrPayload, payload = {}) {
 
     if (showSuccessToast) {
       showToast("Sesión iniciada correctamente");
-    }
-
-    // Botón de Supervisiones para Perfil Unidad
-    if (user && String(user.rol || "").trim().toUpperCase() === "UNIDAD") {
-      const btnSup = $("btnViewSupervisions");
-      if (btnSup) {
-        btnSup.innerHTML = '<span class="material-symbols-rounded">history</span> Historial';
-        btnSup.onclick = () => openSupervisionListModal(user.clues);
-      }
-    } else {
-       if ($("btnViewSupervisions")) $("btnViewSupervisions").style.display = "none";
     }
 
     deferPostLoginTask(async () => {
@@ -3982,14 +3855,11 @@ function apiCall(actionOrPayload, payload = {}) {
   }
 
   function getLastThursdayLocal(baseYmd) {
+
     const override = getConsumiblesCaptureDate();
     if (override) return override;
 
-    let d = new Date();
-    if (baseYmd) {
-      const [y, m, day] = baseYmd.split('-');
-      d = new Date(y, m - 1, day, 0, 0, 0);
-    }
+    const d = baseYmd ? new Date(baseYmd + "T00:00:00") : new Date();
 
     while (d.getDay() !== 4) {
       d.setDate(d.getDate() - 1);
@@ -4016,8 +3886,7 @@ function apiCall(actionOrPayload, payload = {}) {
   }
 
   function getConsumiblesOperationalRangeClient(base) {
-    const [y, m, day] = base.split('-');
-    const d = new Date(y, m - 1, day, 0, 0, 0);
+    const d = new Date(base + "T00:00:00");
     const dow = d.getDay();
 
     if (dow === 3) {
@@ -5020,20 +4889,29 @@ function apiCall(actionOrPayload, payload = {}) {
     if (HAS_TODAY_SR) {
       loadExistenciaIntoForm(TODAY_CACHE.sr);
     } else {
-      // Intentar restaurar borrador de emergencia si no hay captura oficial
-      const restored = Drafting.apply("formSR");
-      if (!restored) {
-        if ($("nombreSR")) $("nombreSR").value = "";
+      if ($("nombreSR")) $("nombreSR").value = "";
 
-        [
-          "bcg", "hepatitis_b", "hexavalente", "dpt", "rotavirus",
-          "neumococica_13", "neumococica_20", "srp", "sr", "vph",
-          "varicela", "hepatitis_a", "td", "tdpa", "covid_19",
-          "influenza", "vsr"
-        ].forEach(id => {
-          if ($(id)) $(id).value = "";
-        });
-      }
+      [
+        "bcg",
+        "hepatitis_b",
+        "hexavalente",
+        "dpt",
+        "rotavirus",
+        "neumococica_13",
+        "neumococica_20",
+        "srp",
+        "sr",
+        "vph",
+        "varicela",
+        "hepatitis_a",
+        "td",
+        "tdpa",
+        "covid_19",
+        "influenza",
+        "vsr"
+      ].forEach(id => {
+        if ($(id)) $(id).value = "";
+      });
 
       ORIGINAL_SR = null;
     }
@@ -5041,16 +4919,12 @@ function apiCall(actionOrPayload, payload = {}) {
     if (HAS_TODAY_CONS) {
       loadCONSIntoForm(TODAY_CACHE.cons);
     } else {
-      // Intentar restaurar borrador de emergencia si no hay captura oficial
-      const restored = Drafting.apply("formCONS");
-      if (!restored) {
-        if ($("nombreCONS")) $("nombreCONS").value = "";
-        if ($("srp_dosis")) $("srp_dosis").value = "";
-        if ($("sr_dosis")) $("sr_dosis").value = "";
-        if ($("jeringa_reconst_5ml_0605500438")) $("jeringa_reconst_5ml_0605500438").value = "";
-        if ($("jeringa_aplic_05ml_0605502657")) $("jeringa_aplic_05ml_0605502657").value = "";
-        if ($("aguja_0600403711")) $("aguja_0600403711").value = "";
-      }
+      if ($("nombreCONS")) $("nombreCONS").value = "";
+      if ($("srp_dosis")) $("srp_dosis").value = "";
+      if ($("sr_dosis")) $("sr_dosis").value = "";
+      if ($("jeringa_reconst_5ml_0605500438")) $("jeringa_reconst_5ml_0605500438").value = "";
+      if ($("jeringa_aplic_05ml_0605502657")) $("jeringa_aplic_05ml_0605502657").value = "";
+      if ($("aguja_0600403711")) $("aguja_0600403711").value = "";
       ORIGINAL_CONS = null;
     }
 
@@ -5230,101 +5104,7 @@ function apiCall(actionOrPayload, payload = {}) {
       `).join("");
       }
     }
-
-    // ✅ Actualizar Gráficas del Dashboard Ejecutivo
-    initExecutiveCharts(data);
   }
-
-  let chartInstanceCompliance = null;
-  let chartInstanceCapturas = null;
-
-  function initExecutiveCharts(data) {
-    if (!data || typeof Chart === "undefined") return;
-
-    const ctxCompliance = $("chartCompliance")?.getContext("2d");
-    const ctxCapturas = $("chartCapturas")?.getContext("2d");
-
-    if (!ctxCompliance || !ctxCapturas) return;
-
-    // MD3 Tonal Palette Colors
-    const colorPrimary = getComputedStyle(document.documentElement).getPropertyValue("--md-sys-color-primary").trim() || "#041E42";
-    const colorSecondary = getComputedStyle(document.documentElement).getPropertyValue("--md-sys-color-secondary").trim() || "#006A6A";
-    const colorError = "#BA1A1A";
-    const colorSurface = "rgba(0,0,0,0.05)";
-
-    // 1. Gráfica de Cumplimiento (Doughnut)
-    const pct = Number(data.compliance_pct || 0);
-    const remaining = Math.max(0, 100 - pct);
-
-    // Determinamos color según semáforo MD3
-    let mainColor = colorPrimary;
-    if (pct < 70) mainColor = colorError;
-    else if (pct < 90) mainColor = "#D97706"; // Amber/Warn
-
-    if (chartInstanceCompliance) chartInstanceCompliance.destroy();
-    chartInstanceCompliance = new Chart(ctxCompliance, {
-      type: "doughnut",
-      data: {
-        datasets: [{
-          data: [pct, remaining],
-          backgroundColor: [mainColor, colorSurface],
-          borderWidth: 0,
-          circumference: 360,
-          rotation: 0,
-          cutout: "82%",
-          borderRadius: 20
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: { duration: 1500, easing: "easeOutQuart" },
-        plugins: { tooltip: { enabled: false }, legend: { display: false } }
-      }
-    });
-
-    if ($("compliancePctVal")) {
-      $("compliancePctVal").textContent = `${pct}%`;
-      $("compliancePctVal").style.color = mainColor;
-      $("compliancePctVal").style.fontWeight = "800";
-    }
-
-    // 2. Gráfica de Capturas (Bar)
-    const capturadas = Number(data.total_capturadas || 0);
-    const faltantes = Number(data.total_faltantes || 0);
-
-    if (chartInstanceCapturas) chartInstanceCapturas.destroy();
-    chartInstanceCapturas = new Chart(ctxCapturas, {
-      type: "bar",
-      data: {
-        labels: ["Capturadas", "Faltantes"],
-        datasets: [{
-          label: "Unidades",
-          data: [capturadas, faltantes],
-          backgroundColor: [colorSecondary, "rgba(220, 38, 38, 0.15)"],
-          borderColor: [colorSecondary, "#DC2626"],
-          borderWidth: 0,
-          borderRadius: 12,
-          barThickness: 48
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          y: {
-            beginAtZero: true,
-            grid: { display: true, color: "rgba(0,0,0,0.03)" },
-            border: { display: false },
-            ticks: { precision: 0, font: { weight: "600" } }
-          },
-          x: { grid: { display: false }, border: { display: false }, ticks: { font: { weight: "700" } } }
-        }
-      }
-    });
-  }
-
 
   function setLoggedInUI(user, status) {
     USER = user;
@@ -6015,7 +5795,6 @@ function apiCall(actionOrPayload, payload = {}) {
 
       flashElement("formSR");
       setSavedStamp();
-      Drafting.clear("formSR");
 
       await refreshAfterMutation({
         touchToday: true,
@@ -6124,7 +5903,6 @@ function apiCall(actionOrPayload, payload = {}) {
       );
       flashElement("formCONS");
       setSavedStamp();
-      Drafting.clear("formCONS");
 
       await refreshAfterMutation({
         touchToday: true,
@@ -6333,7 +6111,6 @@ function apiCall(actionOrPayload, payload = {}) {
       showToast("Solicitud de pinol guardada");
       pushLiveEvent("Pinol", "Tu solicitud fue enviada correctamente.", "good");
       flashElement("formPINOL");
-      Drafting.clear("formPINOL");
       setSavedStamp();
 
       $("nombrePINOL").value = "";
@@ -6429,28 +6206,13 @@ function apiCall(actionOrPayload, payload = {}) {
         return;
       }
 
-      const { filename, b64, downloadUrl, mimeType } = res.data;
-
-      if (downloadUrl) {
-        // Nueva lógica: Descarga desde Google Drive (Asíncrona)
-        const link = document.createElement("a");
-        link.href = downloadUrl;
-        link.target = "_blank";
-        link.rel = "noopener noreferrer";
-        // Intentar forzar descarga si es posible (no siempre funciona cross-origin)
-        link.download = filename || "reporte.xlsx";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } else if (b64) {
-        // Legacy: Descarga desde Base64 (Síncrona)
-        const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-        const blob = new Blob([bytes], { type: mimeType || "application/octet-stream" });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = filename || "reporte.xlsx";
-        link.click();
-      }
+      const { filename, b64, mimeType } = res.data;
+      const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+      const blob = new Blob([bytes], { type: mimeType || "application/octet-stream" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = filename || "reporte.xlsx";
+      link.click();
 
       showToast("El archivo se exportó correctamente");
 
@@ -7412,8 +7174,6 @@ function apiCall(actionOrPayload, payload = {}) {
     return data || null;
   }
 
-  let chartInstanceHist = null;
-
   function renderHistoryMetrics(data) {
     const rows = data?.rows || [];
     const tbody = $("historyTbody");
@@ -7427,40 +7187,11 @@ function apiCall(actionOrPayload, payload = {}) {
     $("histPromCONS").textContent = `${avgCONS}%`;
 
     // Semáforo automático
-    if ($("kpiCardHistSR")) $("kpiCardHistSR").className = "dashboardCard " + getComplianceTone(avgBIO);
-    if ($("kpiCardHistCONS")) $("kpiCardHistCONS").className = "dashboardCard " + getComplianceTone(avgCONS);
-
-    // ✅ Implementación de Gráfica Histórica MD3
-    const ctxHist = $("chartHistCompare")?.getContext("2d");
-    if (ctxHist && typeof Chart !== "undefined") {
-      if (chartInstanceHist) chartInstanceHist.destroy();
-      chartInstanceHist = new Chart(ctxHist, {
-        type: "bar",
-        data: {
-          labels: ["Biológicos", "Consumibles"],
-          datasets: [{
-            label: "Promedio de Cumplimiento",
-            data: [avgBIO, avgCONS],
-            backgroundColor: ["rgba(4, 30, 66, 0.8)", "rgba(0, 106, 106, 0.8)"],
-            borderRadius: 12,
-            barThickness: 56
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          indexAxis: 'y',
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { beginAtZero: true, max: 100, grid: { display: false }, ticks: { font: { weight: "700" } } },
-            y: { grid: { display: false }, ticks: { font: { weight: "700" } } }
-          }
-        }
-      });
-    }
+    if ($("kpiCardHistSR")) $("kpiCardHistSR").className = "kpiCard " + getComplianceTone(avgBIO);
+    if ($("kpiCardHistCONS")) $("kpiCardHistCONS").className = "kpiCard " + getComplianceTone(avgCONS);
 
     if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="12" class="muted">Sin datos para ese periodo</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="11" class="muted">Sin datos para ese periodo</td></tr>`;
       if (cards) cards.innerHTML = `<div class="muted">Sin datos para ese periodo</div>`;
       return;
     }
@@ -7470,7 +7201,7 @@ function apiCall(actionOrPayload, payload = {}) {
       <td>${escapeHtml(r.municipio || "")}</td>
       <td>${escapeHtml(r.clues || "")}</td>
       <td>${escapeHtml(r.unidad || "")}</td>
-      <td><span style="font-weight:800; color:var(--md-sys-color-primary)">${Number(r.cumplimiento_operativo || 0)}%</span></td>
+      <td>${Number(r.cumplimiento_operativo || 0)}%</td>
       <td>${Number(r.bio_cumplimiento || 0)}%</td>
       <td>${Number(r.bio_capturas || 0)}</td>
       <td>${Number(r.bio_faltas || 0)}</td>
@@ -7478,11 +7209,6 @@ function apiCall(actionOrPayload, payload = {}) {
       <td>${Number(r.cons_capturas || 0)}</td>
       <td>${Number(r.cons_faltas || 0)}</td>
       <td>${escapeHtml(r.ultima_cons || "—")}</td>
-      <td style="text-align:center;">
-        <button class="md-btn-icon-only" onclick="openSupervisionListModal('${r.clues}')" title="Ver Supervisiones">
-          <span class="material-symbols-rounded">visibility</span>
-        </button>
-      </td>
     </tr>
   `).join("");
 
@@ -7493,11 +7219,11 @@ function apiCall(actionOrPayload, payload = {}) {
             Number(r.cumplimiento_operativo || 0) >= 70 ? "warn" : "bad";
 
         return `
-        <div class="dashboardCard">
+        <div class="mobileInfoCard">
           <div class="mobileInfoHead">
             <div class="mobileInfoTitle">${escapeHtml(r.unidad || "Unidad")}</div>
-            <div class="mobileInfoBadge ${tone}" style="border-radius: 100px; padding: 4px 12px; font-weight: 800;">
-              ${Number(r.cumplimiento_operativo || 0)}%
+            <div class="mobileInfoBadge ${tone}">
+              Operativo ${Number(r.cumplimiento_operativo || 0)}%
             </div>
           </div>
 
@@ -7510,25 +7236,22 @@ function apiCall(actionOrPayload, payload = {}) {
               <div class="mobileInfoLabel">CLUES</div>
               <div class="mobileInfoValue">${escapeHtml(r.clues || "")}</div>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
-               <div class="mobileInfoField" style="background: var(--md-surface-container); padding: 8px; border-radius: 12px;">
-                <div class="mobileInfoLabel">Biológico</div>
-                <div class="mobileInfoValue" style="font-weight: 800; font-size: 16px;">${Number(r.bio_cumplimiento || 0)}%</div>
-              </div>
-               <div class="mobileInfoField" style="background: var(--md-surface-container); padding: 8px; border-radius: 12px;">
-                <div class="mobileInfoLabel">Consumibles</div>
-                <div class="mobileInfoValue" style="font-weight: 800; font-size: 16px;">${Number(r.cons_cumplimiento || 0)}%</div>
-              </div>
+            <div class="mobileInfoField">
+              <div class="mobileInfoLabel">Cumplimiento biológico</div>
+              <div class="mobileInfoValue">${Number(r.bio_cumplimiento || 0)}% · Capturas: ${Number(r.bio_capturas || 0)} · Faltas: ${Number(r.bio_faltas || 0)}</div>
             </div>
-            <div class="mobileInfoField" style="margin-top: 10px; border-top: 1px solid var(--md-outline-variant); padding-top: 10px;">
+            <div class="mobileInfoField">
+              <div class="mobileInfoLabel">Cumplimiento consumibles</div>
+              <div class="mobileInfoValue">${Number(r.cons_cumplimiento || 0)}% · Capturas: ${Number(r.cons_capturas || 0)} · Faltas: ${Number(r.cons_faltas || 0)}</div>
+            </div>
+            <div class="mobileInfoField">
+              <div class="mobileInfoLabel">Cumplimiento operativo total</div>
+              <div class="mobileInfoValue">${Number(r.cumplimiento_operativo || 0)}% · Capturas: ${Number(r.total_capturado || 0)} · Faltas: ${Number(r.total_faltas || 0)}</div>
+            </div>
+            <div class="mobileInfoField">
               <div class="mobileInfoLabel">Última consumibles</div>
               <div class="mobileInfoValue">${escapeHtml(r.ultima_cons || "—")}</div>
             </div>
-          </div>
-          <div class="mobileInfoActions" style="margin-top: 10px;">
-             <button class="md-btn-text" onclick="openSupervisionListModal('${r.clues}')" style="width:100%">
-                <span class="material-symbols-rounded">visibility</span> Ver Supervisiones
-             </button>
           </div>
         </div>
       `;
@@ -8125,10 +7848,6 @@ function apiCall(actionOrPayload, payload = {}) {
         console.warn("realtime loadNotifications error:", err);
       });
     }, 45000));
-
-    // Initialize drafting
-    Drafting.setupListeners();
-    setTimeout(() => Drafting.checkAndNotify(), 2000);
   }
 
   /**
@@ -8228,91 +7947,52 @@ function apiCall(actionOrPayload, payload = {}) {
       `;
       categorySelect.disabled = false;
     }
-
-    // Toggle Supervision Date Card
-    const toggleSupDate = () => {
-      const isSup = categorySelect.value === "Supervisión";
-      const dateCard = $("uploadSupervisionDateCard");
-      if (dateCard) dateCard.style.display = isSup ? "block" : "none";
-    };
-
-    categorySelect.removeEventListener("change", toggleSupDate);
-    categorySelect.addEventListener("change", toggleSupDate);
-    toggleSupDate();
   }
 
   async function loadMunicipalUploadContext() {
-    const munis = USER.municipiosAllowed || [];
-    const muniSelect = $("uploadMuniSelect");
-    const muniWrap = $("uploadMunicipalMuniWrap");
-    const unitWrap = $("uploadMunicipalUnitWrap");
-
     try {
-      // 1. Fetch catalog if missing
-      if (!ALL_UNITS_CATALOG || ALL_UNITS_CATALOG.length === 0) {
-        showOverlay("Cargando catálogo de unidades…", "Catálogo");
+      if (!ALL_UNITS_CATALOG) {
+        showOverlay("Cargando catálogo…", "Catálogo");
         const res = await apiCall({ action: "unitCatalog" });
         hideOverlay();
         if (res && res.ok) {
           ALL_UNITS_CATALOG = res.data || [];
-        } else {
-          showToast("No se pudo cargar el catálogo. Reintenta.", false);
-          return;
         }
       }
 
-      // 2. Logic based on user permissions
+      const munis = USER.municipiosAllowed || [];
+      const muniSelect = $("uploadMuniSelect");
+      const muniWrap = $("uploadMunicipalMuniWrap");
+
       if (munis.length > 1 || (munis.length === 1 && munis[0] === "*")) {
-        // Multi-municipio
+        // Multi-municipio or Admin-like municipal
         muniWrap.style.display = "block";
-        unitWrap.style.display = "none"; // Wait for muni selection
-        const uniqueMunis = [...new Set((ALL_UNITS_CATALOG || []).map(u => u.municipio))].filter(m => canSeeMunicipio_(USER, m));
+        const uniqueMunis = [...new Set(ALL_UNITS_CATALOG.map(u => u.municipio))].filter(m => canSeeMunicipio_(USER, m));
 
         muniSelect.innerHTML = '<option value="" disabled selected>Selecciona municipio...</option>' +
           uniqueMunis.map(m => `<option value="${m}">${m}</option>`).join("");
       } else {
-        // Single municipio (The most common case)
-        const singleMuni = munis[0] || "";
+        // Single municipio: Skip selection, jump to units
         muniWrap.style.display = "none";
-        
-        // Populate and jump to units
-        muniSelect.innerHTML = `<option value="${singleMuni}" selected>${singleMuni}</option>`;
-        muniSelect.value = singleMuni;
+        muniSelect.value = munis[0] || "";
         updateUploadUnitList();
       }
     } catch (e) {
-      console.error("loadMunicipalUploadContext error:", e);
-      hideOverlay();
-      showToast("Error crítico al cargar catálogo", false);
+      showToast("Error al cargar contexto municipal", false);
     }
   }
 
   function updateUploadUnitList() {
+    const muni = $("uploadMuniSelect").value || (USER.municipiosAllowed?.[0] !== "*" ? USER.municipiosAllowed?.[0] : "");
+    if (!muni) return;
+
+    const units = (ALL_UNITS_CATALOG || []).filter(u => u.municipio === muni);
     const unitSelect = $("uploadUnitSelect");
     const unitWrap = $("uploadMunicipalUnitWrap");
-    if (!unitWrap) return; // Blindaje: Si no existe el contenedor, abortar sin error fatal
-    
-    // Force visibility immediately
+
     unitWrap.style.display = "block";
-
-    // Blindaje: Comprobar existencia de valores y USER de forma segura
-    const muni = $("uploadMuniSelect")?.value || (USER?.municipiosAllowed?.[0] !== "*" ? USER?.municipiosAllowed?.[0] : "");
-    if (!muni) {
-       if (unitSelect) unitSelect.innerHTML = '<option value="" disabled selected>Error: Municipio no detectado</option>';
-       return;
-    }
-
-    const normTarget = normalizeSearchText(muni);
-    const units = (ALL_UNITS_CATALOG || []).filter(u => normalizeSearchText(u.municipio) === normTarget);
-
-    if (unitSelect) {
-      if (units.length === 0) {
-         unitSelect.innerHTML = '<option value="" disabled selected>No se encontraron unidades</option>';
-      } else {
-         unitSelect.innerHTML = '<option value="" disabled selected>Selecciona unidad...</option>' +
-           units.map(u => `<option value="${u.clues}" data-name="${u.unidad}">${u.unidad}</option>`).join("");
-      }
-    }
+    unitSelect.innerHTML = '<option value="" disabled selected>Selecciona unidad...</option>' +
+      units.map(u => `<option value="${u.clues}" data-name="${u.unidad}">${u.unidad}</option>`).join("");
   }
 
   function updateUploadCluesView() {
@@ -8351,8 +8031,8 @@ function apiCall(actionOrPayload, payload = {}) {
     if (btnDoUpload) btnDoUpload.disabled = true;
 
     // Reset selections
-    if ($("uploadUnitSelect")) $("uploadUnitSelect").innerHTML = "";
-    if ($("uploadMuniSelect")) $("uploadMuniSelect").value = "";
+    $("uploadUnitSelect").innerHTML = "";
+    $("uploadMuniSelect").value = "";
     $("uploadCluesValue").textContent = "—";
   }
 
@@ -8422,8 +8102,7 @@ function apiCall(actionOrPayload, payload = {}) {
         base64: base64,
         category: category,
         targetClues: targetClues,
-        targetUnidad: targetUnidad,
-        supervisionDate: $("uploadSupervisionDate")?.value || ""
+        targetUnidad: targetUnidad
       };
 
       try {
@@ -8439,7 +8118,6 @@ function apiCall(actionOrPayload, payload = {}) {
       } catch (err) {
         showToast("Error de conexión: " + err.message, false);
       } finally {
-        hideOverlay();
         setBtnBusy("btnDoUpload", false);
       }
     };
@@ -8450,140 +8128,3 @@ function apiCall(actionOrPayload, payload = {}) {
 
     reader.readAsDataURL(file);
   }
-
-  // ✅ Soporte de UX: Cerrar dropdowns y modales con tecla Escape
-  function closeActiveFloatingUi() {
-    // 1. Cerrar Dropdown de Notificaciones
-    closeTopNotifDropdown();
-
-    // 2. Cerrar Modales de Exportación e Interfaz
-    $("exportOverlay")?.classList.remove("show");
-    $("bioConfirmOverlay")?.classList.remove("show");
-    
-    // Forzar cierre de cualquier overlay con la clase modal-overlay o similar
-    const overlays = document.querySelectorAll('.overlay.show, .modal-overlay.show, .modern-overlay.show');
-    overlays.forEach(o => o.classList.remove('show'));
-
-    // 3. Otros modales comunes
-    $("uploadFilesOverlay")?.classList.remove("show");
-    $("passwordOverlay")?.classList.remove("show");
-    $("forgotOverlay")?.classList.remove("show");
-    $("supervisionListOverlay")?.classList.remove("show");
-  }
-
-  $("btnSupListClose")?.addEventListener("click", () => {
-    $("supervisionListOverlay")?.classList.remove("show");
-  });
-
-  /** ===== SUPERVISION LIST LOGIC ===== **/
-  window.openSupervisionListModal = async function(clues = null) {
-    const targetClues = clues || (USER?.rol === "UNIDAD" ? USER.clues : "");
-    if (!targetClues && USER?.rol !== "ADMIN" && USER?.rol !== "JURISDICCIONAL") {
-      showToast("No se especificó una unidad para consultar.", false);
-      return;
-    }
-
-    try {
-      showOverlay("Consultando historial...", "Seguimiento");
-      if ($("supervisionListOverlay")) $("supervisionListOverlay").classList.add("show");
-      renderSupervisionList([]);
-      
-      // Válvula de seguridad: Si pasan 8 segundos y no hay respuesta, forzar el cierre del overlay
-      const safetyTimeout = setTimeout(() => {
-        hideOverlay();
-        console.warn("Seguridad: Cierre forzado de overlay por timeout.");
-      }, 8000);
-
-      const res = await apiCall({ 
-        action: "getSupervisions", 
-        token: TOKEN, 
-        targetClues: targetClues 
-      });
-      
-      clearTimeout(safetyTimeout);
-      hideOverlay();
-
-      if (res && res.ok) {
-        renderSupervisionList(res.data || []);
-        
-        const overlay = $("supervisionListOverlay");
-        if (overlay) overlay.classList.add("show");
-        
-        const first = Array.isArray(res.data) && res.data[0];
-        const titleEl = $("supListTitle");
-        if (titleEl) {
-          if (targetClues) {
-            const unitName = first ? first.UNIDAD : targetClues;
-            titleEl.textContent = `Supervisiones: ${unitName}`;
-          } else {
-            titleEl.textContent = "Historial General de Supervisiones";
-          }
-        }
-      } else {
-        showToast("Error: " + (res?.error || "No se ha podido cargar el historial"), false);
-      }
-    } catch (e) {
-      console.error("openSupervisionListModal error:", e);
-      hideOverlay();
-      showToast("Error de conexión al cargar el historial", false);
-    } finally {
-      setTimeout(hideOverlay, 100);
-    }
-  };
-
-  function renderSupervisionList(items) {
-    const container = $("supListContainer");
-    if (!container) return;
-
-    if (!items || items.length === 0) {
-      container.innerHTML = `
-        <div class="sup-empty-state">
-          <div class="sup-empty-icon">
-            <span class="material-symbols-rounded">history_toggle_off</span>
-          </div>
-          <p>No se encontraron registros de supervisión.</p>
-        </div>
-      `;
-      return;
-    }
-
-    container.innerHTML = items.map(item => {
-      const sNombre = item.SUPERVISOR_NOMBRE || item.supervisor_nombre || "Desconocido";
-      const fSup = item.FECHA_SUPERVISION || item.fecha_supervision;
-      const fSub = item.FECHA_SUBIDA || item.fecha_subida;
-      const dUrl = item.URL_DRIVE || item.url_drive;
-
-      const supDate = formatDateMx(new Date(fSup + "T00:00:00"));
-      const uploadDate = formatDateMx(new Date(fSub));
-      
-      return `
-        <div class="sup-item-card">
-          <div class="sup-card-accent"></div>
-          <div class="sup-info-main">
-            <div class="sup-header">
-              <span class="material-symbols-rounded sup-type-icon">verified_user</span>
-              <div class="sup-title-col">
-                <div class="sup-fecha-label">Supervisión: ${supDate}</div>
-                <div class="sup-supervisor-name">Por: ${escapeHtml(sNombre)}</div>
-              </div>
-            </div>
-            <div class="sup-footer">
-              <span class="sup-tag">Cargado: ${uploadDate}</span>
-              <a href="${dUrl}" target="_blank" class="sup-action-link" title="Abrir en Drive">
-                <span class="material-symbols-rounded">open_in_new</span>
-                Ver Cédula
-              </a>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join("");
-  }
-
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      closeActiveFloatingUi();
-    }
-  });
-
-</script>
