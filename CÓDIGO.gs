@@ -13,6 +13,7 @@ const SHEET_CONS_EXPORT_TEMPLATE = "EXPORT_CONSUMIBLES";
 const SHEET_PINOL = "PINOL_SOLICITUDES";
 const SHEET_REMINDER_LOG = "REMINDER_LOG";
 const SHEET_NOTIFICATIONS = "NOTIFICACIONES";
+const SHEET_SUPERVISIONES = "SUPERVISIONES";
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycby3en_qswj1PmE6o80nypsDM6Gw4kueRUimNSgMKJxzDojRFCsXBjFZngR9UpnkYL0n/exec";
 const DRIVE_ROOT_FOLDER_ID = "1peAgAjdKkjAHJGMcHbdPLKiXlqIwUm_J";
 const CACHE_TTL_USERS = 3600; // 1 hora
@@ -24,7 +25,8 @@ const PASS_SALT = "JS1_SALT_2026_MX"; // Salt para haseo
 /** ===== NOTIFICACIONES / CORREOS ===== **/
 const EMAIL_RESUMEN_SEMANAL = [
   "municipioqrojs1@gmail.com",
-  "vacunasjs1hc@gmail.com"
+  "vacunasjs1hc@gmail.com",
+  "vacunasmarques@gmail.com"
 ];
 
 const EMAIL_ALERTAS_BY_MUNICIPIO = {
@@ -51,7 +53,7 @@ function doGet(e) {
       tpl.RESET_TOKEN = token;
 
       return tpl.evaluate()
-        .setTitle("Restablecer contraseña - JS1 Reportes")
+        .setTitle("Restablecer contraseÃ±a - JS1 Reportes")
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
     }
 
@@ -65,7 +67,7 @@ function doGet(e) {
       tpl.WEB_APP_URL = WEB_APP_URL;
 
       return tpl.evaluate()
-        .setTitle("Pedido de biológico - JS1 Reportes")
+        .setTitle("Pedido de biolÃ³gico - JS1 Reportes")
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
     }
 
@@ -95,7 +97,7 @@ function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
-/** ===== ASSETS: Data URL (base64) con Caché ===== **/
+/** ===== ASSETS: Data URL (base64) con CachÃ© ===== **/
 function getAssetDataUrl_(key) {
   const cacheKey = "ASSET_" + key;
   const cached = CacheService.getScriptCache().get(cacheKey);
@@ -111,7 +113,7 @@ function getAssetDataUrl_(key) {
     const b64 = Utilities.base64Encode(blob.getBytes());
     const dataUrl = `data:${mime};base64,${b64}`;
     
-    // Almacenar en caché por 6 horas
+    // Almacenar en cachÃ© por 6 horas
     CacheService.getScriptCache().put(cacheKey, dataUrl, CACHE_TTL_ASSETS);
     return dataUrl;
   } catch (e) {
@@ -127,7 +129,7 @@ function withLock_(fn) {
     try {
       lock.waitLock(12000);
     } catch(e) {
-      return { ok: false, error: "Servidor procesando capturas simultáneas. Por favor reintenta en unos segundos." };
+      return { ok: false, error: "Servidor procesando capturas simultÃ¡neas. Por favor reintenta en unos segundos." };
     }
     try {
       return fn(req);
@@ -139,7 +141,7 @@ function withLock_(fn) {
 
 /** 
  * Bloqueo inteligente por CLUES usando CacheService. 
- * Evita que una unidad bloquee a la aplicación completa.
+ * Evita que una unidad bloquee a la aplicaciÃ³n completa.
  */
 function withUnitLock_(fn) {
   return function(req) {
@@ -164,7 +166,7 @@ function withUnitLock_(fn) {
       }
       
       if (!lockSet) {
-        return { ok: false, error: "Tu unidad ya tiene una operación de guardado en curso. Por favor espera unos segundos." };
+        return { ok: false, error: "Tu unidad ya tiene una operaciÃ³n de guardado en curso. Por favor espera unos segundos." };
       }
       
       try {
@@ -232,10 +234,11 @@ function api(req) {
     case "unitCatalog": return api_unitCatalog(req);
     case "notificationUserCatalog": return api_notificationUserCatalog(req);
     case "uploadFile": return api_uploadFile(req);
+    case "getSupervisions": return api_getSupervisions(req);
 
 
     default:
-      return { ok: false, error: "Acción inválida: " + action };
+      return { ok: false, error: "AcciÃ³n invÃ¡lida: " + action };
   }
 }
 
@@ -244,7 +247,7 @@ function api_bioGetExportOptions(payload) {
     const u = authOrThrow_(payload?.token);
 
     if (u.rol !== "ADMIN" && u.rol !== "MUNICIPAL" && u.rol !== "JURISDICCIONAL") {
-      return { ok:false, error:"Sin permisos para exportar biológicos." };
+      return { ok:false, error:"Sin permisos para exportar biolÃ³gicos." };
     }
 
     const municipios = getExportableMunicipios_(u);
@@ -272,14 +275,14 @@ function api_uploadFile(payload) {
     const category = payload?.category || "Otros reportes";
 
     if (!DRIVE_ROOT_FOLDER_ID || DRIVE_ROOT_FOLDER_ID === "1peAgAjdKkjAHJGMcHbdPLKiXlqIwUm_J") {
-       // El ID ya está configurado.
+       // El ID ya estÃ¡ configurado.
     }
 
     if (!base64 || !filename) {
       throw new Error("Datos de archivo incompletos.");
     }
 
-    // [VALIDACIÓN] Lista blanca de tipos de archivos permitidos
+    // [VALIDACIÃ“N] Lista blanca de tipos de archivos permitidos
     const allowedMimeTypes = [
       "image/jpeg",
       "image/png",
@@ -288,7 +291,7 @@ function api_uploadFile(payload) {
     ];
 
     if (!allowedMimeTypes.includes(String(mimeType || "").toLowerCase())) {
-      throw new Error("Tipo de archivo no permitido. Solo se admiten PDF e imágenes (JPG, PNG, WEBP).");
+      throw new Error("Tipo de archivo no permitido. Solo se admiten PDF e imÃ¡genes (JPG, PNG, WEBP).");
     }
 
     // Determinar la unidad destino
@@ -297,7 +300,7 @@ function api_uploadFile(payload) {
 
     if (u.rol === "MUNICIPAL") {
       if (payload.targetClues && payload.targetUnidad) {
-        // VALIDACIÓN: Verificar que el MUNICIPAL tenga permiso sobre esta unidad
+        // VALIDACIÃ“N: Verificar que el MUNICIPAL tenga permiso sobre esta unidad
         const targetUnit = getUnitByClues_(payload.targetClues);
         if (!targetUnit || !canSeeMunicipio_(u, targetUnit.municipio)) {
           throw new Error("No tienes permisos para subir archivos a esta unidad.");
@@ -315,17 +318,36 @@ function api_uploadFile(payload) {
     const unitFolderName = `${finalClues || "SIN_CLUES"} - ${finalUnidad || "SIN_NOMBRE"}`;
     const unitFolder = getOrCreateSubFolder_(rootFolder, unitFolderName);
 
-    // 2. Carpeta de Categoría
+    // 2. Carpeta de CategorÃ­a
     const catFolder = getOrCreateSubFolder_(unitFolder, category);
 
-    // 3. Renombrar archivo para mejor identificación
+    // 3. Renombrar archivo para mejor identificaciÃ³n
     const now = new Date();
-    const dateStr = Utilities.formatDate(now, "GMT-6", "yyyyMMdd-HHmm");
-    const newName = `${finalClues || "SIN_CLUES"} - ${category} - ${dateStr} - ${filename}`;
+    const uploadDateStr = Utilities.formatDate(now, "GMT-6", "yyyyMMdd");
+    let newName = `${finalClues || "SIN_CLUES"} - ${category} - ${uploadDateStr} - ${filename}`;
+
+    if (category === "SupervisiÃ³n" && payload.supervisionDate) {
+      const supDateFormatted = payload.supervisionDate.replace(/-/g, "");
+      newName = `${finalClues || "SIN_CLUES"} - Supervision - ${supDateFormatted} (Subido: ${uploadDateStr}) - ${filename}`;
+    }
 
     // 4. Guardar Archivo
     const blob = Utilities.newBlob(Utilities.base64Decode(base64), mimeType, newName);
     const file = catFolder.createFile(blob);
+
+    // [NUEVO] Log de Supervisiones si corresponde
+    if (category === "SupervisiÃ³n") {
+      logSupervisionRecord_({
+        clues: finalClues,
+        unidad: finalUnidad,
+        supervisionDate: payload.supervisionDate || Utilities.formatDate(now, "GMT-6", "yyyy-MM-dd"),
+        uploadDate: now,
+        supervisorId: u.usuario, // CORRECCIÃ“N: Usar .usuario como ID oficial
+        supervisorNombre: getSupervisorFullName_(u.usuario), // OBTENER NOMBRE MAPEADO
+        fileId: file.getId(),
+        fileUrl: file.getUrl()
+      });
+    }
 
     return {
       ok: true,
@@ -365,7 +387,7 @@ function saveToTempDrive_(blob, filename) {
     const root = DriveApp.getFolderById(rootId);
     const folder = getOrCreateSubFolder_(root, "REPORTES_TEMPORALES");
     
-    // Eliminar archivos muy viejos (más de 2 días) para limpieza automática
+    // Eliminar archivos muy viejos (mÃ¡s de 2 dÃ­as) para limpieza automÃ¡tica
     const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
     const oldFiles = folder.getFiles();
     while (oldFiles.hasNext()) {
@@ -378,7 +400,7 @@ function saveToTempDrive_(blob, filename) {
     const file = folder.createFile(blob);
     file.setName(filename);
     
-    // Configuración solicitada: Cualquier persona con el enlace puede ver/descargar
+    // ConfiguraciÃ³n solicitada: Cualquier persona con el enlace puede ver/descargar
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     
     return file.getDownloadUrl();
@@ -466,7 +488,7 @@ function normalizeNotifType_(v) {
 function normalizeNotifScope_(v) {
   const x = String(v || "").trim().toUpperCase();
   if (["ALL_MY_UNITS", "MUNICIPIO", "CLUES"].includes(x)) return x;
-  throw new Error("target_scope inválido. Usa ALL_MY_UNITS, MUNICIPIO o CLUES.");
+  throw new Error("target_scope invÃ¡lido. Usa ALL_MY_UNITS, MUNICIPIO o CLUES.");
 }
 
 function userCanTargetMunicipio_(sender, municipio) {
@@ -499,7 +521,7 @@ function notificationTargetsUser_(notif, u) {
     const matchMuni = normalizeTextKey_(notif.target_municipio) === userMunicipio;
     if (!matchMuni) return false;
 
-    // RESTRICCIÓN: Notificaciones enviadas por JURISDICCIONAL a un MUNICIPIO
+    // RESTRICCIÃ“N: Notificaciones enviadas por JURISDICCIONAL a un MUNICIPIO
     // solo deben ser visibles para el rol MUNICIPAL (y ADMIN), no para UNIDAD.
     if (String(notif.from_rol || "").toUpperCase() === "JURISDICCIONAL") {
       return userRol === "MUNICIPAL" || userRol === "ADMIN";
@@ -549,35 +571,35 @@ function fixUtf8Text_(v) {
   s = s.trim();
 
   const fixes = {
-    "QUERÃ‰TARO": "QUERÉTARO",
-    "QUERETARO": "QUERÉTARO",
-    "EL MARQUÃ‰S": "EL MARQUÉS",
-    "EL MARQUES": "EL MARQUÉS",
-    "BIOLÃ“GICO": "BIOLÓGICO",
-    "BIOLÃ“GICOS": "BIOLÓGICOS",
-    "JURISDICCIÃ“N": "JURISDICCIÓN",
-    "EXPORTACIÃ“N": "EXPORTACIÓN",
-    "PROGRAMACIÃ“N": "PROGRAMACIÓN",
-    "VACUNACIÃ“N": "VACUNACIÓN",
+    "QUERÃƒâ€°TARO": "QUERÃ‰TARO",
+    "QUERETARO": "QUERÃ‰TARO",
+    "EL MARQUÃƒâ€°S": "EL MARQUÃ‰S",
+    "EL MARQUES": "EL MARQUÃ‰S",
+    "BIOLÃƒâ€œGICO": "BIOLÃ“GICO",
+    "BIOLÃƒâ€œGICOS": "BIOLÃ“GICOS",
+    "JURISDICCIÃƒâ€œN": "JURISDICCIÃ“N",
+    "EXPORTACIÃƒâ€œN": "EXPORTACIÃ“N",
+    "PROGRAMACIÃƒâ€œN": "PROGRAMACIÃ“N",
+    "VACUNACIÃƒâ€œN": "VACUNACIÃ“N",
     "MUNICIPIOS EXPORTADOS": "MUNICIPIOS EXPORTADOS"
   };
 
   if (fixes[s]) return fixes[s];
 
   return s
-    .replace(/Ã /g, "Á")
-    .replace(/Ã‰/g, "É")
-    .replace(/Ã /g, "Í")
-    .replace(/Ã“/g, "Ó")
-    .replace(/Ãš/g, "Ú")
-    .replace(/Ã‘/g, "Ñ")
-    .replace(/Ã¡/g, "á")
-    .replace(/Ã©/g, "é")
-    .replace(/Ã­/g, "í")
-    .replace(/Ã³/g, "ó")
-    .replace(/Ãº/g, "ú")
-    .replace(/Ã±/g, "ñ")
-    .replace(/Â/g, "");
+    .replace(/Ãƒ /g, "Ã")
+    .replace(/Ãƒâ€°/g, "Ã‰")
+    .replace(/Ãƒ /g, "Ã")
+    .replace(/Ãƒâ€œ/g, "Ã“")
+    .replace(/ÃƒÅ¡/g, "Ãš")
+    .replace(/Ãƒâ€˜/g, "Ã‘")
+    .replace(/ÃƒÂ¡/g, "Ã¡")
+    .replace(/ÃƒÂ©/g, "Ã©")
+    .replace(/ÃƒÂ­/g, "Ã­")
+    .replace(/ÃƒÂ³/g, "Ã³")
+    .replace(/ÃƒÂº/g, "Ãº")
+    .replace(/ÃƒÂ±/g, "Ã±")
+    .replace(/Ã‚/g, "");
 }
 
 function formatSheetDate_(value, tz) {
@@ -601,7 +623,7 @@ function formatSheetDate_(value, tz) {
     return `${yyyy}-${mm}-${dd}`;
   }
 
-  // último intento: parsear
+  // Ãºltimo intento: parsear
   const d = new Date(s);
   if (!isNaN(d)) {
     return Utilities.formatDate(d, tz || Session.getScriptTimeZone() || "America/Mexico_City", "yyyy-MM-dd");
@@ -637,7 +659,7 @@ function getAlertEmailsByMunicipio_(municipio) {
 function getStrictMunicipioEmails_(municipio) {
   let key = normalizeTextKey_(municipio);
 
-  // 🔥 Corrección inteligente
+  // ðŸ”¥ CorrecciÃ³n inteligente
   if (key === "MARQUES") key = "EL MARQUES";
 
   if (EMAIL_ALERTAS_BY_MUNICIPIO[key] && EMAIL_ALERTAS_BY_MUNICIPIO[key].length) {
@@ -701,7 +723,10 @@ function dateToYmdMx_(d) {
 function parseYmdAsMxDate_(ymd) {
   const s = String(ymd || "").trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
-  return new Date(s + "T12:00:00");
+  
+  // Parseo seguro universal para cualquier dispositivo/navegador
+  const [year, month, day] = s.split('-');
+  return new Date(year, month - 1, day, 12, 0, 0);
 }
 
 function getEasterSundayYmd_(year) {
@@ -743,15 +768,15 @@ function getMexicoHolidayMap_(year) {
   const easter = getEasterSundayYmd_(year);
 
   return {
-    [`${year}-01-01`]: "Año Nuevo",
-    [nthWeekdayOfMonthYmd_(year, 2, 1, 1)]: "Constitución",
-    [nthWeekdayOfMonthYmd_(year, 3, 1, 3)]: "Natalicio de Benito Juárez",
+    [`${year}-01-01`]: "AÃ±o Nuevo",
+    [nthWeekdayOfMonthYmd_(year, 2, 1, 1)]: "ConstituciÃ³n",
+    [nthWeekdayOfMonthYmd_(year, 3, 1, 3)]: "Natalicio de Benito JuÃ¡rez",
     [addDaysYmd_(easter, -3)]: "Jueves Santo",
     [addDaysYmd_(easter, -2)]: "Viernes Santo",
-    [`${year}-05-01`]: "Día del Trabajo",
+    [`${year}-05-01`]: "DÃ­a del Trabajo",
     [`${year}-05-05`]: "Batalla de Puebla",
-    [`${year}-09-16`]: "Independencia de México",
-    [nthWeekdayOfMonthYmd_(year, 11, 1, 3)]: "Revolución Mexicana",
+    [`${year}-09-16`]: "Independencia de MÃ©xico",
+    [nthWeekdayOfMonthYmd_(year, 11, 1, 3)]: "RevoluciÃ³n Mexicana",
     [`${year}-12-25`]: "Navidad"
   };
 }
@@ -788,14 +813,14 @@ function requireNonEmpty_(label, v) {
 function requireNonNegNumber_(label, v) {
   if (v === "" || v === null || typeof v === "undefined") throw new Error(`Campo obligatorio: ${label}`);
   const n = Number(v);
-  if (!Number.isFinite(n) || n < 0) throw new Error(`${label} inválido (usa número >= 0).`);
+  if (!Number.isFinite(n) || n < 0) throw new Error(`${label} invÃ¡lido (usa nÃºmero >= 0).`);
   return n;
 }
 
 function nonNegNumberOrZero_(v) {
   if (v === "" || v === null || typeof v === "undefined") return 0;
   const n = Number(v);
-  if (!Number.isFinite(n) || n < 0) throw new Error(`Valor inválido (usa número >= 0).`);
+  if (!Number.isFinite(n) || n < 0) throw new Error(`Valor invÃ¡lido (usa nÃºmero >= 0).`);
   return n;
 }
 
@@ -817,7 +842,7 @@ function sanitizeEmailList_(toList) {
 function sendEmail_(toList, subject, htmlBody) {
   const clean = sanitizeEmailList_(toList);
   if (!clean.length) {
-    Logger.log("sendEmail_: envío omitido, lista vacía o inválida. Asunto: " + String(subject || ""));
+    Logger.log("sendEmail_: envÃ­o omitido, lista vacÃ­a o invÃ¡lida. Asunto: " + String(subject || ""));
     return;
   }
 
@@ -902,7 +927,7 @@ function buildInstitutionalEmailShell_(opts) {
   const title = escapeHtml_(opts?.title || "JS1 Reportes");
   const subtitle = escapeHtml_(opts?.subtitle || "");
   const body = String(opts?.body || "");
-  const footer = escapeHtml_(opts?.footer || "Jurisdicción Sanitaria 1 · SESEQ");
+  const footer = escapeHtml_(opts?.footer || "JurisdicciÃ³n Sanitaria 1 Â· SESEQ");
   
   return `
     <div style="margin:0;padding:0;background-color:#F0F4F9;font-family: 'Outfit', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
@@ -911,28 +936,28 @@ function buildInstitutionalEmailShell_(opts) {
           <td align="center">
             <div style="max-width:680px;margin:0 auto;padding:0 10px;">
               
-              <!-- ✅ HEADER CARD -->
+              <!-- âœ… HEADER CARD -->
               <div style="border-radius:28px 28px 4px 4px;overflow:hidden;background:linear-gradient(135deg,#001B3D 0%,#003366 100%);box-shadow:0 8px 30px rgba(0,27,61,0.12);">
                 <div style="padding:40px 32px 32px 32px;color:#ffffff;text-align:left;">
-                  <div style="font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;opacity:0.85;">JURISDICCIÓN SANITARIA 1</div>
+                  <div style="font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;opacity:0.85;">JURISDICCIÃ“N SANITARIA 1</div>
                   <div style="font-size:32px;font-weight:900;line-height:1.1;margin-bottom:8px;letter-spacing:-0.5px;">${title}</div>
                   ${subtitle ? `<div style="font-size:15px;opacity:0.9;font-weight:500;">${subtitle}</div>` : ``}
                 </div>
               </div>
 
-              <!-- ✅ MAIN CONTENT CARD -->
+              <!-- âœ… MAIN CONTENT CARD -->
               <div style="margin-top:4px;border-radius:4px 4px 28px 28px;background:#ffffff;box-shadow:0 12px 40px rgba(0,0,0,0.06);border:1px solid rgba(0,0,0,0.04);">
                 <div style="padding:32px;text-align:left;color:#1A1C1E;font-size:16px;line-height:1.6;">
                   ${body}
                 </div>
 
-                <!-- ✅ FOOTER DIVIDER -->
+                <!-- âœ… FOOTER DIVIDER -->
                 <div style="padding:0 32px 32px 32px;">
                   <div style="height:1px;background-color:#E1E2E5;margin-bottom:20px;"></div>
                   <div style="font-size:12px;color:#44474E;line-height:1.5;text-align:center;">
                     <strong style="font-size:13px;color:#001B3D;">${footer}</strong><br>
-                    Correo generado automáticamente por el sistema de reportes institucional JS1.<br>
-                    &copy; ${new Date().getFullYear()} Registro de Biológicos y Consumibles.
+                    Correo generado automÃ¡ticamente por el sistema de reportes institucional JS1.<br>
+                    &copy; ${new Date().getFullYear()} Registro de BiolÃ³gicos y Consumibles.
                   </div>
                 </div>
               </div>
@@ -982,7 +1007,7 @@ function renderInstitutionalUnitListHtml_(items, emptyText, ok) {
             <td style="padding:10px;border-bottom:1px solid #eef2f7;">${escapeHtml_(x.unidad || "")}</td>
             <td style="padding:10px;border-bottom:1px solid #eef2f7;color:${ok ? "#166534" : "#b45309"};">
               ${ok
-                ? `${escapeHtml_(x.capturado_por || "Capturado")}${String(x.editado || "").toUpperCase() === "SI" ? " · Editado" : ""}`
+                ? `${escapeHtml_(x.capturado_por || "Capturado")}${String(x.editado || "").toUpperCase() === "SI" ? " Â· Editado" : ""}`
                 : "Pendiente de captura"}
             </td>
           </tr>
@@ -1008,10 +1033,17 @@ function escapeHtml_(text) {
 
 function getAllActiveUnits_() {
   const cacheKey = "ALL_ACTIVE_UNITS";
-  const cached = CacheService.getScriptCache().get(cacheKey);
-  if (cached) {
+  const cache = CacheService.getScriptCache();
+  
+  // Leer los fragmentos de memoria
+  const chunkCount = cache.get(cacheKey + "_CHUNKS");
+  if (chunkCount) {
     try {
-      return JSON.parse(cached);
+      let fullJson = "";
+      for (let i = 0; i < Number(chunkCount); i++) {
+        fullJson += cache.get(cacheKey + "_" + i) || "";
+      }
+      return JSON.parse(fullJson);
     } catch (e) {}
   }
 
@@ -1051,10 +1083,17 @@ function getAllActiveUnits_() {
     String(a.unidad).localeCompare(String(b.unidad), "es")
   );
 
-  try {
-    CacheService.getScriptCache().put(cacheKey, JSON.stringify(out), CACHE_TTL_UNITS);
+try {
+    const jsonString = JSON.stringify(out);
+    const chunkSize = 90000; // 90KB por margen de seguridad
+    const chunks = Math.ceil(jsonString.length / chunkSize);
+    
+    cache.put(cacheKey + "_CHUNKS", String(chunks), CACHE_TTL_UNITS);
+    for (let i = 0; i < chunks; i++) {
+      cache.put(cacheKey + "_" + i, jsonString.substring(i * chunkSize, (i + 1) * chunkSize), CACHE_TTL_UNITS);
+    }
   } catch (e) {
-    Logger.log("Error guardando unidades en caché: " + e.message);
+    Logger.log("Error guardando unidades en cachÃ©: " + e.message);
   }
 
   return out;
@@ -1186,8 +1225,8 @@ function renderUnitListHtml_(items, emptyText) {
 
   const lis = items.map(x => `
     <li style="margin:4px 0;">
-      <b>${escapeHtml_(x.clues)}</b> — ${escapeHtml_(x.unidad)}
-      ${x.capturado_por ? `<span style="color:#6b7280;">(capturó: ${escapeHtml_(x.capturado_por)})</span>` : ""}
+      <b>${escapeHtml_(x.clues)}</b> â€” ${escapeHtml_(x.unidad)}
+      ${x.capturado_por ? `<span style="color:#6b7280;">(capturÃ³: ${escapeHtml_(x.capturado_por)})</span>` : ""}
       ${String(x.editado || "").toUpperCase() === "SI" ? ` <span style="color:#b45309;">[editado]</span>` : ""}
     </li>
   `).join("");
@@ -1239,9 +1278,11 @@ function parseMunicipios_(s) {
   const raw = normalize_(s);
   if (!raw) return [];
   if (raw === "*" || raw.toUpperCase() === "ALL") return ["*"];
+  
+  // CORRECCIÃ“N: Procesar con fixUtf8Text_ antes de normalizar para no perder caracteres especiales como en QuerÃ©taro
   return raw
     .split(",")
-    .map(x => normalizeTextKey_(x))
+    .map(x => normalizeTextKey_(fixUtf8Text_(x))) 
     .filter(Boolean);
 }
 
@@ -1354,6 +1395,10 @@ function clearUnitsCache_() {
 function getUserByToken_(token) {
   const usuario = verifyToken_(token);
   if (!usuario) return null;
+  
+  // CORRECCIÃ“N: Limpiar cachÃ© de perfil para nuevos permisos (MUNICIPAL)
+  clearUserCache_(usuario);
+  
   const u = getUser_(usuario);
   if (!u) return null;
   if (u.activo !== "SI") return null;
@@ -1362,12 +1407,12 @@ function getUserByToken_(token) {
 
 function authOrThrow_(token, roleOpt) {
   const u = getUserByToken_(token);
-  if (!u) throw new Error("Sesión inválida. Inicia sesión de nuevo.");
+  if (!u) throw new Error("SesiÃ³n invÃ¡lida. Inicia sesiÃ³n de nuevo.");
   if (roleOpt && u.rol !== roleOpt) throw new Error("No autorizado (rol).");
   return u;
 }
 
-/** ===== util fecha: último jueves (<= hoy) ===== **/
+/** ===== util fecha: Ãºltimo jueves (<= hoy) ===== **/
 function getConsumiblesManualOverride_() {
   const props = PropertiesService.getScriptProperties();
   const raw = props.getProperty(PROP_CONS_OVERRIDE) || "";
@@ -1509,7 +1554,7 @@ function getConsumiblesStatus_(baseYmdOpt, cluesOpt) {
         isThursday: false,
         canCaptureConsumibles: true,
         consumiblesCaptureDate: today,
-        consumiblesReason: `Apertura anticipada por ${getHolidayNameMx_(jueves) || "día inhábil"}`,
+        consumiblesReason: `Apertura anticipada por ${getHolidayNameMx_(jueves) || "dÃ­a inhÃ¡bil"}`,
         consumiblesManualOverride: false,
         consumiblesHolidayOverride: true
       };
@@ -1546,7 +1591,7 @@ function getConsumiblesStatus_(baseYmdOpt, cluesOpt) {
           isThursday: true,
           canCaptureConsumibles: false,
           consumiblesCaptureDate: "",
-          consumiblesReason: `La captura de consumibles ya quedó registrada el miércoles ${miercoles}.`,
+          consumiblesReason: `La captura de consumibles ya quedÃ³ registrada el miÃ©rcoles ${miercoles}.`,
           consumiblesManualOverride: false,
           consumiblesHolidayOverride: true
         };
@@ -1558,7 +1603,7 @@ function getConsumiblesStatus_(baseYmdOpt, cluesOpt) {
         isThursday: true,
         canCaptureConsumibles: true,
         consumiblesCaptureDate: today,
-        consumiblesReason: `Jueves habilitado porque no hubo captura válida el miércoles ${miercoles}.`,
+        consumiblesReason: `Jueves habilitado porque no hubo captura vÃ¡lida el miÃ©rcoles ${miercoles}.`,
         consumiblesManualOverride: false,
         consumiblesHolidayOverride: true
       };
@@ -1572,7 +1617,7 @@ function getConsumiblesStatus_(baseYmdOpt, cluesOpt) {
     canCaptureConsumibles: false,
     consumiblesCaptureDate: "",
     consumiblesReason: (dow === 4 && isHolidayMx_(today))
-      ? `Hoy es inhábil: ${getHolidayNameMx_(today)}`
+      ? `Hoy es inhÃ¡bil: ${getHolidayNameMx_(today)}`
       : "Disponible solo jueves o por apertura extraordinaria",
     consumiblesManualOverride: false,
     consumiblesHolidayOverride: false
@@ -1591,8 +1636,8 @@ function getConsumiblesOperationalRange_(baseYmdOpt) {
     };
   }
 
-  // miércoles adelantado por jueves inhábil:
-  // el corte municipal seguirá el jueves natural, pero la captura válida quedó en miércoles
+  // miÃ©rcoles adelantado por jueves inhÃ¡bil:
+  // el corte municipal seguirÃ¡ el jueves natural, pero la captura vÃ¡lida quedÃ³ en miÃ©rcoles
   if (dow === 4 && isHolidayMx_(base)) {
     const miercoles = addDaysYmd_(base, -1);
     if (getDayOfWeekFromStr_(miercoles) === 3 && isAutoConsumiblesDate_(miercoles)) {
@@ -1669,11 +1714,11 @@ function findRowByFechaClues_(sh, fecha, clues) {
   const cluesKey = normalizeClues_(clues);
 
   // Optimizamos: traemos solo el rango que contiene Fecha y CLUES
-  // En la mayoría de las hojas Clues está en Col E (5) o Col F (6)
+  // En la mayorÃ­a de las hojas Clues estÃ¡ en Col E (5) o Col F (6)
   // Traemos desde C (3) hasta F (6) para cubrir todos los casos
   const data = sh.getRange(2, 3, last - 1, 4).getValues(); 
 
-  // Determinamos el índice de la columna CLUES relativo al rango (C=0, D=1, E=2, F=3)
+  // Determinamos el Ã­ndice de la columna CLUES relativo al rango (C=0, D=1, E=2, F=3)
   let idxCluesRel = 2; // Default: Col E
   if (sheetName === SHEET_BIO_CAPTURE) idxCluesRel = 3; // Col F
 
@@ -1699,7 +1744,7 @@ function findRowByFechaCluesInRange_(sh, fechaInicio, fechaFin, clues) {
   let idxCluesRel = 2; // Default: Col E
   if (sheetName === SHEET_BIO_CAPTURE) idxCluesRel = 3; // Col F
 
-  // Buscamos de abajo hacia arriba (más reciente primero)
+  // Buscamos de abajo hacia arriba (mÃ¡s reciente primero)
   for (let i = data.length - 1; i >= 0; i--) {
     const f = normalizeDateKey_(data[i][0]);
     const c = normalizeClues_(data[i][idxCluesRel]);
@@ -1838,7 +1883,7 @@ function ensureBioCalendarSheet_() {
 
 function moveToBusinessDayMx_(ymd, step) {
   let d = parseYmdAsMxDate_(ymd);
-  if (!d) throw new Error("Fecha inválida: " + ymd);
+  if (!d) throw new Error("Fecha invÃ¡lida: " + ymd);
 
   do {
     d.setDate(d.getDate() + step);
@@ -1849,7 +1894,7 @@ function moveToBusinessDayMx_(ymd, step) {
 
 function addBusinessDaysMx_(ymd, delta) {
   let out = normalizeDateKey_(ymd);
-  if (!out) throw new Error("Fecha inválida: " + ymd);
+  if (!out) throw new Error("Fecha invÃ¡lida: " + ymd);
 
   if (!delta) return out;
 
@@ -1898,16 +1943,16 @@ function getBioCaptureWindow_(baseDateOpt) {
           fechaPedidoProgramada: fechaProgramada,
           habilitarDesde: habilitarDesde || fechaProgramada,
           habilitarHasta: habilitarHasta || fechaProgramada,
-          motivo: motivo || "Configuración manual en CALENDARIO_PEDIDOS",
+          motivo: motivo || "ConfiguraciÃ³n manual en CALENDARIO_PEDIDOS",
           source: "CALENDAR"
         };
       }
     }
   } catch (e) {
-    // Si la hoja aún no existe o falla algo, usamos modo automático.
+    // Si la hoja aÃºn no existe o falla algo, usamos modo automÃ¡tico.
   }
 
-  // 2) Modo automático inteligente
+  // 2) Modo automÃ¡tico inteligente
   const base22 = new Date(baseRef.getFullYear(), baseRef.getMonth(), 22);
   let fechaProgramada = Utilities.formatDate(base22, tz_(), "yyyy-MM-dd");
 
@@ -1922,7 +1967,7 @@ function getBioCaptureWindow_(baseDateOpt) {
     fechaPedidoProgramada: fechaProgramada,
     habilitarDesde,
     habilitarHasta,
-    motivo: "Ventana automática operativa",
+    motivo: "Ventana automÃ¡tica operativa",
     source: "AUTO"
   };
 }
@@ -2006,7 +2051,7 @@ function getBioRowsByFechaPedido_(fechaPedido, clues) {
 
 function validateBioItems_(configRows, items, opts) {
   if (!Array.isArray(configRows) || !configRows.length) {
-    throw new Error("No hay configuración de biológicos para validar.");
+    throw new Error("No hay configuraciÃ³n de biolÃ³gicos para validar.");
   }
 
   const options = opts || {};
@@ -2055,12 +2100,12 @@ function validateBioItems_(configRows, items, opts) {
       isCaravana && bioKey === "BCG";
 
     if (!sinValidacionOperativa && requiereMultiplo && multiplo > 1 && pedido > 0 && (pedido % multiplo !== 0)) {
-      errors.push(`${cfg.biologico}: el pedido debe ser múltiplo de ${multiplo}.`);
+      errors.push(`${cfg.biologico}: el pedido debe ser mÃºltiplo de ${multiplo}.`);
     }
 
     if (!sinValidacionOperativa && !omitirAdvertenciaPorCaravana && promedio > 0 && totalDisponible < promedio) {
       warnings.push(
-        `${cfg.biologico}: la validación detectó que no estás solicitando biológico suficiente con base en el promedio. ` +
+        `${cfg.biologico}: la validaciÃ³n detectÃ³ que no estÃ¡s solicitando biolÃ³gico suficiente con base en el promedio. ` +
         `Existencia ${existencia} + pedido ${pedido} = ${totalDisponible}; ` +
         `promedio ${promedio}; faltan ${faltantePromedio} frascos para alcanzar el promedio.`
       );
@@ -2157,7 +2202,7 @@ function buildBioExportXlsx_(user, fechaPedido, municipiosSeleccionadosOpt) {
     );
 
   if (!bios.length) {
-    throw new Error("No hay biológicos activos en CATALOGO_BIOLOGICOS.");
+    throw new Error("No hay biolÃ³gicos activos en CATALOGO_BIOLOGICOS.");
   }
 
   const capMap = {};
@@ -2364,7 +2409,7 @@ function buildConsExportXlsx_(user, fechaInicio, fechaFin, municipiosSeleccionad
 
   for (let i = 0; i < municipiosSeleccionados.length; i++) {
     if (!municipiosValidos.includes(municipiosSeleccionados[i])) {
-      throw new Error("Uno o más municipios seleccionados no están permitidos para este perfil.");
+      throw new Error("Uno o mÃ¡s municipios seleccionados no estÃ¡n permitidos para este perfil.");
     }
   }
 
@@ -2560,7 +2605,7 @@ function fillConsExportTemplateSheet_(sh, fechaInicio, fechaFin, units, consMap,
 
     return tieneDatos
       ? `${u.clues} - ${u.unidad}`
-      : `${u.clues} - ${u.unidad} ⚠`;
+      : `${u.clues} - ${u.unidad} âš `;
   });
 
   sh.getRange(3, 2, 1, units.length).clearContent().setValues([headers]);
@@ -2600,7 +2645,7 @@ function fillConsExportTemplateSheet_(sh, fechaInicio, fechaFin, units, consMap,
 
   sh.getRange("A10").setValue(`Generado por: ${usuario}`);
   sh.getRange("A11").setValue(`Perfil: ${perfil}`);
-  sh.getRange("A12").setValue(`Fecha generación: ${fechaGen}`);
+  sh.getRange("A12").setValue(`Fecha generaciÃ³n: ${fechaGen}`);
 }
 
 function exportSpreadsheetToXlsxBlob_(spreadsheetId, filename) {
@@ -2614,7 +2659,7 @@ function exportSpreadsheetToXlsxBlob_(spreadsheetId, filename) {
 
   const code = resp.getResponseCode();
   if (code < 200 || code >= 300) {
-    throw new Error("No se pudo exportar la matriz XLSX. Código HTTP: " + code + " | " + resp.getContentText());
+    throw new Error("No se pudo exportar la matriz XLSX. CÃ³digo HTTP: " + code + " | " + resp.getContentText());
   }
 
   return resp.getBlob().setName(filename);
@@ -2693,30 +2738,30 @@ function api_login(payload) {
     const usuario = normalize_(payload?.usuario);
     const password = normalize_(payload?.password);
     requireNonEmpty_("Usuario", usuario);
-    requireNonEmpty_("Contraseña", password);
+    requireNonEmpty_("ContraseÃ±a", password);
 
     const u = getUser_(usuario);
-    if (!u || u.activo !== "SI") return { ok:false, error:"Usuario no existe o está inactivo." };
+    if (!u || u.activo !== "SI") return { ok:false, error:"Usuario no existe o estÃ¡ inactivo." };
 
     const inputHash = hashPassword_(password);
     let authOk = false;
 
-    // Caso 1: Ya está haseada
+    // Caso 1: Ya estÃ¡ haseada
     if (isHashed_(u.password)) {
       authOk = (u.password === inputHash);
     } 
-    // Caso 2: Migración (está en texto plano)
+    // Caso 2: MigraciÃ³n (estÃ¡ en texto plano)
     else {
       authOk = (u.password === password);
       if (authOk) {
-        // MIGRACIÓN: Hasear la contraseña ahora que sabemos que es correcta
+        // MIGRACIÃ“N: Hasear la contraseÃ±a ahora que sabemos que es correcta
         const sh = ensureUsersSheet_();
         sh.getRange(u.row, 2).setValue(inputHash);
         clearUserCache_(u.usuario);
       }
     }
 
-    if (!authOk) return { ok:false, error:"Contraseña incorrecta." };
+    if (!authOk) return { ok:false, error:"ContraseÃ±a incorrecta." };
 
     return {
       ok:true,
@@ -2741,7 +2786,7 @@ function api_login(payload) {
 
 function api_whoami(payload) {
   const u = getUserByToken_(payload?.token);
-  if (!u) return { ok:false, error:"Sin sesión." };
+  if (!u) return { ok:false, error:"Sin sesiÃ³n." };
   return {
     ok:true,
     data:{
@@ -2788,9 +2833,14 @@ function getMonthKeysInRange_(fromYmd, toYmd) {
   return out;
 }
 
+function getStartOfMonthYmd_(baseYmdOpt) {
+  const base = normalizeDateKey_(baseYmdOpt || todayStr_()) || todayStr_();
+  return `${base.slice(0, 7)}-01`;
+}
+
 function getOperationalComplianceSnapshot_(user, fromYmdOpt, toYmdOpt) {
   const toYmd = normalizeDateKey_(toYmdOpt || todayStr_()) || todayStr_();
-  const fromYmd = normalizeDateKey_(fromYmdOpt || getStartOfYearYmd_(toYmd)) || getStartOfYearYmd_(toYmd);
+  const fromYmd = normalizeDateKey_(fromYmdOpt || getStartOfMonthYmd_(toYmd)) || getStartOfMonthYmd_(toYmd);
 
   const units = getVisibleUnits_(user);
   if (!units.length) {
@@ -2820,7 +2870,13 @@ function getOperationalComplianceSnapshot_(user, fromYmdOpt, toYmdOpt) {
     };
   });
 
-  const consExpectedDates = getDateRangeDays_(fromYmd, toYmd).filter(d => isValidConsumiblesDate_(d));
+  // Solo contamos jueves operativos como denominador (fiel a la solicitud del usuario)
+  const consExpectedDates = getDateRangeDays_(fromYmd, toYmd).filter(d => {
+    // Solo hasta HOY para no inflar el denominador con dÃ­as futuros
+    if (d > todayStr_()) return false;
+    return isValidConsumiblesDate_(d);
+  });
+  
   const consExpectedSet = {};
   consExpectedDates.forEach(d => {
     consExpectedSet[d] = true;
@@ -2839,6 +2895,10 @@ function getOperationalComplianceSnapshot_(user, fromYmdOpt, toYmdOpt) {
 
     if (!fechaPedidoProgramada || !habilitarHasta) return;
     if (habilitarHasta < fromYmd || habilitarHasta > toYmd) return;
+    
+    // Solo si el periodo ya venciÃ³ o estamos en Ã©l
+    if (habilitarHasta > todayStr_()) return; 
+
     if (bioPeriodSeen[fechaPedidoProgramada]) return;
 
     bioPeriodSeen[fechaPedidoProgramada] = true;
@@ -2895,6 +2955,7 @@ function getOperationalComplianceSnapshot_(user, fromYmdOpt, toYmdOpt) {
     const consExpected = consExpectedDates.length;
     const bioExpected = bioPeriods.length;
 
+    // Cumplimiento total sugerido: Consumibles es el peso principal
     const completed = consDone + bioDone;
     const expected = consExpected + bioExpected;
     const compliancePct = expected ? Math.round((completed / expected) * 100) : 0;
@@ -3033,13 +3094,13 @@ function api_savePinol(payload) {
     `
         : `
       <div style="margin:0 0 16px 0;padding:16px;border-radius:16px;background-color:#C4EED0;color:#072711;font-size:14px;font-weight:800;border:1px solid rgba(0,0,0,0.04);">
-        Confirmación: Solicitud registrada correctamente en el sistema.
+        ConfirmaciÃ³n: Solicitud registrada correctamente en el sistema.
       </div>
     `;
 
       const body = `
         <p style="margin:0 0 10px 0;font-size:14px;color:#334155;">
-          Se recibió una <b>nueva solicitud de pinol</b> a través del sistema <b>JS1 Reportes</b>.
+          Se recibiÃ³ una <b>nueva solicitud de pinol</b> a travÃ©s del sistema <b>JS1 Reportes</b>.
         </p>
 
         ${alertaExistencia}
@@ -3060,7 +3121,7 @@ function api_savePinol(payload) {
             <b>Municipio:</b> ${escapeHtml_(u.municipio)}<br>
             <b>CLUES:</b> ${escapeHtml_(u.clues)}<br>
             <b>Unidad:</b> ${escapeHtml_(u.unidad)}<br>
-            <b>Solicitó:</b> ${escapeHtml_(nombre)}
+            <b>SolicitÃ³:</b> ${escapeHtml_(nombre)}
           </div>
         </div>
 
@@ -3085,9 +3146,9 @@ function api_savePinol(payload) {
 
       const html = buildInstitutionalEmailShell_({
         title: "Solicitud de pinol",
-        subtitle: `Nueva solicitud recibida · ${escapeHtml_(u.municipio)}`,
+        subtitle: `Nueva solicitud recibida Â· ${escapeHtml_(u.municipio)}`,
         body,
-        footer: "Jurisdicción Sanitaria 1 · SESEQ · Control operativo de insumos"
+        footer: "JurisdicciÃ³n Sanitaria 1 Â· SESEQ Â· Control operativo de insumos"
       });
 
       sendEmail_(toList, subject, html);
@@ -3302,10 +3363,10 @@ function api_markPinolDelivered(payload) {
 
       const detalleBase =
         `Tu solicitud de pinol ya fue marcada como ENTREGADA.` +
-        `\n\nFecha de solicitud: ${fecha || "—"}` +
-        `\nUnidad: ${unidad || "—"}` +
-        `\nCLUES: ${clues || "—"}` +
-        `\nSolicitó: ${nombreSolicita || "—"}` +
+        `\n\nFecha de solicitud: ${fecha || "â€”"}` +
+        `\nUnidad: ${unidad || "â€”"}` +
+        `\nCLUES: ${clues || "â€”"}` +
+        `\nSolicitÃ³: ${nombreSolicita || "â€”"}` +
         `\nExistencia reportada: ${existencia} botella(s)` +
         `\nSolicitud: ${solicitud} botella(s)`;
 
@@ -3341,7 +3402,7 @@ function api_markPinolDelivered(payload) {
 
       return {
         ok:true,
-        message:"Solicitud marcada como entregada y notificación enviada."
+        message:"Solicitud marcada como entregada y notificaciÃ³n enviada."
       };
     }
 
@@ -3362,14 +3423,14 @@ function api_sendNotification(payload) {
 
     const target_scope = normalizeNotifScope_(payload?.target_scope);
     
-    // RESTRICCIÓN JURISDICCIONAL: Solo niveles MUNICIPIO o ALL_MY_UNITS
+    // RESTRICCIÃ“N JURISDICCIONAL: Solo niveles MUNICIPIO o ALL_MY_UNITS
     if (sender.rol === "JURISDICCIONAL") {
       if (target_scope !== "MUNICIPIO" && target_scope !== "ALL_MY_UNITS") {
         return { ok:false, error:"Como perfil JURISDICCIONAL, solo puedes enviar notificaciones a nivel de MUNICIPIO." };
       }
     }
 
-    // RESTRICCIÓN MUNICIPAL: Solo sus CLUES o MUNICIPIOS asignados
+    // RESTRICCIÃ“N MUNICIPAL: Solo sus CLUES o MUNICIPIOS asignados
     if (sender.rol === "MUNICIPAL") {
       if (target_scope === "CLUES") {
         const targetUnit = getUnitByClues_(payload?.target_clues);
@@ -3427,7 +3488,7 @@ function api_sendNotification(payload) {
       meta_json
     ]);
 
-    return { ok:true, message:"Notificación enviada." };
+    return { ok:true, message:"NotificaciÃ³n enviada." };
 
   } catch (e) {
     return { ok:false, error:String(e.message || e) };
@@ -3498,21 +3559,21 @@ function api_markNotificationRead(payload) {
 
       if (item.id !== id) continue;
       if (!notificationTargetsUser_(item, u)) {
-        return { ok:false, error:"No autorizado para esa notificación." };
+        return { ok:false, error:"No autorizado para esa notificaciÃ³n." };
       }
 
       if (item.status === "READ") {
-        return { ok:true, message:"La notificación ya estaba marcada como leída." };
+        return { ok:true, message:"La notificaciÃ³n ya estaba marcada como leÃ­da." };
       }
 
       sh.getRange(row, 13).setValue("READ");
       sh.getRange(row, 14).setValue(new Date());
       sh.getRange(row, 15).setValue(normalize_(u.usuario));
 
-      return { ok:true, message:"Notificación marcada como leída." };
+      return { ok:true, message:"NotificaciÃ³n marcada como leÃ­da." };
     }
 
-    return { ok:false, error:"Notificación no encontrada." };
+    return { ok:false, error:"NotificaciÃ³n no encontrada." };
 
   } catch (e) {
     return { ok:false, error:String(e.message || e) };
@@ -3539,15 +3600,15 @@ function api_deleteNotification(payload) {
       if (item.id !== id) continue;
 
       if (!notificationTargetsUser_(item, u) && String(u.rol || "").toUpperCase() !== "ADMIN") {
-        return { ok:false, error:"No autorizado para eliminar esa notificación." };
+        return { ok:false, error:"No autorizado para eliminar esa notificaciÃ³n." };
       }
 
       sh.deleteRow(row);
 
-      return { ok:true, message:"Notificación eliminada correctamente." };
+      return { ok:true, message:"NotificaciÃ³n eliminada correctamente." };
     }
 
-    return { ok:false, error:"Notificación no encontrada." };
+    return { ok:false, error:"NotificaciÃ³n no encontrada." };
 
   } catch (e) {
     return { ok:false, error:String(e.message || e) };
@@ -3559,7 +3620,7 @@ function api_confirmPinolReceipt(payload) {
     const u = authOrThrow_(payload?.token);
 
     if (String(u.rol || "").toUpperCase() !== "UNIDAD") {
-      return { ok:false, error:"Solo el perfil UNIDAD puede confirmar la recepción." };
+      return { ok:false, error:"Solo el perfil UNIDAD puede confirmar la recepciÃ³n." };
     }
 
     const notificationId = normalize_(payload?.notification_id);
@@ -3578,7 +3639,7 @@ function api_confirmPinolReceipt(payload) {
       if (item.id !== notificationId) continue;
 
       if (!notificationTargetsUser_(item, u)) {
-        return { ok:false, error:"No autorizado para esa notificación." };
+        return { ok:false, error:"No autorizado para esa notificaciÃ³n." };
       }
 
       let meta = {};
@@ -3592,11 +3653,11 @@ function api_confirmPinolReceipt(payload) {
       const event = String(meta.event || "").toUpperCase();
 
       if (source !== "PINOL" || event !== "PINOL_ENTREGADO") {
-        return { ok:false, error:"La notificación no corresponde a una entrega de pinol." };
+        return { ok:false, error:"La notificaciÃ³n no corresponde a una entrega de pinol." };
       }
 
       if (String(meta.confirmed_by_unit || "").toUpperCase() === "SI") {
-        return { ok:true, message:"La recepción ya había sido confirmada." };
+        return { ok:true, message:"La recepciÃ³n ya habÃ­a sido confirmada." };
       }
 
       const municipioNotif = fixUtf8Text_(normalize_(meta.municipio || item.target_municipio || u.municipio || ""));
@@ -3616,11 +3677,11 @@ function api_confirmPinolReceipt(payload) {
 
       const ackTitle = "Pinol recibido";
       const ackMessage =
-        `La unidad confirmó la recepción del pinol.` +
-        `\n\nMunicipio: ${municipioNotif || "—"}` +
-        `\nUnidad: ${unidadNotif || "—"}` +
-        `\nCLUES: ${cluesNotif || "—"}` +
-        `\nConfirmó: ${normalize_(u.usuario) || "—"}`;
+        `La unidad confirmÃ³ la recepciÃ³n del pinol.` +
+        `\n\nMunicipio: ${municipioNotif || "â€”"}` +
+        `\nUnidad: ${unidadNotif || "â€”"}` +
+        `\nCLUES: ${cluesNotif || "â€”"}` +
+        `\nConfirmÃ³: ${normalize_(u.usuario) || "â€”"}`;
 
       const shUsers = ensureUsersSheet_();
       const lastUsers = shUsers.getLastRow();
@@ -3681,17 +3742,17 @@ function api_confirmPinolReceipt(payload) {
         }
       }
 
-      return { ok:true, message:"Recepción confirmada correctamente." };
+      return { ok:true, message:"RecepciÃ³n confirmada correctamente." };
     }
 
-    return { ok:false, error:"Notificación no encontrada." };
+    return { ok:false, error:"NotificaciÃ³n no encontrada." };
 
   } catch (e) {
     return { ok:false, error:String(e.message || e) };
   }
 }
 
-/** ===== SAVE: EXISTENCIA DE BIOLÓGICOS ===== **/
+/** ===== SAVE: EXISTENCIA DE BIOLÃ“GICOS ===== **/
 function api_saveSR(payload) {
   try {
     const u = authOrThrow_(payload?.token);
@@ -3729,7 +3790,7 @@ function api_saveSR(payload) {
 
     const row = findRowByFechaClues_(sh, fecha, u.clues);
     if (row) {
-      return { ok:false, error:`Ya existe una captura de existencia de biológicos para hoy (${fecha}) en esa unidad. Usa "Editar".` };
+      return { ok:false, error:`Ya existe una captura de existencia de biolÃ³gicos para hoy (${fecha}) en esa unidad. Usa "Editar".` };
     }
 
     sh.appendRow([
@@ -3740,7 +3801,7 @@ function api_saveSR(payload) {
       nombre, "", "", ""
     ]);
 
-    return { ok:true, message:"Existencia de biológicos guardada." };
+    return { ok:true, message:"Existencia de biolÃ³gicos guardada." };
   } catch (e) {
     return { ok:false, error:String(e.message || e) };
   }
@@ -3754,7 +3815,7 @@ function api_saveConsumibles(payload) {
     const consStatus = getConsumiblesStatus_(todayStr_(), u.clues);
 
   if (!consStatus.canCaptureConsumibles) {
-    return { ok:false, error:`Este reporte de consumibles no está habilitado hoy. ${consStatus.consumiblesReason}` };
+    return { ok:false, error:`Este reporte de consumibles no estÃ¡ habilitado hoy. ${consStatus.consumiblesReason}` };
   }
 
     const fecha = consStatus.consumiblesCaptureDate || todayStr_();
@@ -3766,7 +3827,7 @@ function api_saveConsumibles(payload) {
     const j1 = requireNonNegNumber_("Jeringa reconst 5ml (060.550.0438)", payload?.jeringa_reconst_5ml_0605500438);
     const j2 = requireNonNegNumber_("Jeringa aplic 0.5ml (060.550.2657)", payload?.jeringa_aplic_05ml_0605502657);
 
-    // ✅ REGLA: Aguja = Jeringa reconst 5ml
+    // âœ… REGLA: Aguja = Jeringa reconst 5ml
     const aguja = j1;
 
     const sh = getSheet_(SHEET_CONS);
@@ -3806,7 +3867,7 @@ function api_getEditLog(payload){
 
     const out = [];
 
-    // ===== EXISTENCIA DE BIOLÓGICOS =====
+    // ===== EXISTENCIA DE BIOLÃ“GICOS =====
     if (tipoFiltro === "TODOS" || tipoFiltro === "SR") {
       const shSR = getSheet_(SHEET_SR_EXISTENCIA);
       ensureHeader_(shSR, [
@@ -3846,7 +3907,7 @@ function api_getEditLog(payload){
             unidad,
             editado_por: editadoPor,
             editado_ts: editadoTs,
-            detalle: "Edición de existencia de biológicos"
+            detalle: "EdiciÃ³n de existencia de biolÃ³gicos"
           });
         }
       }
@@ -3893,7 +3954,7 @@ function api_getEditLog(payload){
             unidad,
             editado_por: editadoPor,
             editado_ts: editadoTs,
-            detalle: "Edición de reporte de consumibles"
+            detalle: "EdiciÃ³n de reporte de consumibles"
           });
         }
       }
@@ -3909,7 +3970,7 @@ function api_getEditLog(payload){
     return { ok:false, error:String(e.message || e) };
   }
 }
-/** ===== UPDATE EXISTENCIA DE BIOLÓGICOS ===== **/
+/** ===== UPDATE EXISTENCIA DE BIOLÃ“GICOS ===== **/
 function api_updateSR(payload) {
   try {
     const u = authOrThrow_(payload?.token);
@@ -3946,9 +4007,9 @@ function api_updateSR(payload) {
     ]);
 
     const row = findRowByFechaClues_(sh, fecha, u.clues);
-    if (!row) return { ok:false, error:`No se encontró captura de existencia de biológicos para editar (${fecha}).` };
+    if (!row) return { ok:false, error:`No se encontrÃ³ captura de existencia de biolÃ³gicos para editar (${fecha}).` };
 
-    // ✅ BATCH UPDATE: Agrupar valores de biológicos (columnas 7 a 24)
+    // âœ… BATCH UPDATE: Agrupar valores de biolÃ³gicos (columnas 7 a 24)
     const bioValues = [[
       bcg, hepatitis_b, hexavalente, dpt, rotavirus,
       neumococica_13, neumococica_20, srp, sr, vph,
@@ -3957,11 +4018,11 @@ function api_updateSR(payload) {
     ]];
     sh.getRange(row, 7, 1, 18).setValues(bioValues);
 
-    // ✅ BATCH UPDATE: Metadatos de edición (columnas 25 a 27)
+    // âœ… BATCH UPDATE: Metadatos de ediciÃ³n (columnas 25 a 27)
     const metaValues = [["SI", u.usuario, new Date()]];
     sh.getRange(row, 25, 1, 3).setValues(metaValues);
 
-    return { ok:true, message:"Existencia de biológicos actualizada." };
+    return { ok:true, message:"Existencia de biolÃ³gicos actualizada." };
   } catch (e) {
     return { ok:false, error:String(e.message || e) };
   }
@@ -3975,7 +4036,7 @@ function api_updateConsumibles(payload) {
     const consStatus = getConsumiblesStatus_(todayStr_(), u.clues);
 
     if (!consStatus.canCaptureConsumibles) {
-      return { ok:false, error:`Los consumibles no están habilitados hoy. ${consStatus.consumiblesReason}` };
+      return { ok:false, error:`Los consumibles no estÃ¡n habilitados hoy. ${consStatus.consumiblesReason}` };
     }
 
     const fecha = consStatus.consumiblesCaptureDate || todayStr_();
@@ -4000,10 +4061,10 @@ function api_updateConsumibles(payload) {
 
     const row = findRowByFechaClues_(sh, fecha, u.clues);
     if (!row) {
-      return { ok:false, error:`No se encontró captura de consumibles para editar (${fecha}).` };
+      return { ok:false, error:`No se encontrÃ³ captura de consumibles para editar (${fecha}).` };
     }
 
-    // ✅ BATCH UPDATE: Agrupar valores de consumibles (columnas 7 a 15)
+    // âœ… BATCH UPDATE: Agrupar valores de consumibles (columnas 7 a 15)
     const consValues = [[
       srp_dosis, sr_dosis, j1, j2, aguja, 
       nombre, "SI", u.usuario, new Date()
@@ -4021,7 +4082,7 @@ function api_bioGetForm(payload) {
     const u = authOrThrow_(payload?.token);
 
     if (u.rol !== "UNIDAD") {
-      return { ok:false, error:"Solo el perfil UNIDAD captura biológicos." };
+      return { ok:false, error:"Solo el perfil UNIDAD captura biolÃ³gicos." };
     }
 
     const today = todayStr_();
@@ -4085,7 +4146,7 @@ function api_saveBio(payload) {
     const u = authOrThrow_(payload?.token);
 
     if (u.rol !== "UNIDAD") {
-      return { ok:false, error:"Solo el perfil UNIDAD captura biológicos." };
+      return { ok:false, error:"Solo el perfil UNIDAD captura biolÃ³gicos." };
     }
 
     const nombre = normalize_(payload?.nombre);
@@ -4098,13 +4159,13 @@ function api_saveBio(payload) {
     if (!isWithinBioCaptureWindow_(today, bioWindow)) {
       return {
         ok:false,
-        error:`La captura de pedido biológico está habilitada del ${bioWindow.habilitarDesde} al ${bioWindow.habilitarHasta}. Fecha objetivo: ${fechaPedidoProgramada}.`
+        error:`La captura de pedido biolÃ³gico estÃ¡ habilitada del ${bioWindow.habilitarDesde} al ${bioWindow.habilitarHasta}. Fecha objetivo: ${fechaPedidoProgramada}.`
       };
     }
 
     const configRows = getBioConfigForUnit_(u.clues);
     if (!configRows.length) {
-      return { ok:false, error:"No hay configuración en PARAM_BIOLOGICOS para esta unidad." };
+      return { ok:false, error:"No hay configuraciÃ³n en PARAM_BIOLOGICOS para esta unidad." };
     }
 
     const checked = validateBioItems_(configRows, payload?.items || [], {
@@ -4134,7 +4195,7 @@ function api_saveBio(payload) {
       const ya = existentesMap[normalizeTextKey_(item.biologico)];
 
       if (ya && ya.row) {
-        // Optimización: actualización en lote de datos y metadatos (columnas 9 a 19)
+        // OptimizaciÃ³n: actualizaciÃ³n en lote de datos y metadatos (columnas 9 a 19)
         sh.getRange(ya.row, 9, 1, 11).setValues([[
           item.max_dosis,
           item.min_dosis,
@@ -4150,7 +4211,7 @@ function api_saveBio(payload) {
         ]]);
         updatedCount++;
       } else {
-        // Recolectar para inserción en lote
+        // Recolectar para inserciÃ³n en lote
         newRows.push([
           makeId_(),
           new Date(),
@@ -4182,7 +4243,7 @@ function api_saveBio(payload) {
 
     return {
       ok:true,
-      message:"Pedido biológico guardado/actualizado.",
+      message:"Pedido biolÃ³gico guardado/actualizado.",
       warnings: checked.warnings,
       insertedCount,
       updatedCount,
@@ -4199,7 +4260,7 @@ function api_bioExportMatrix(payload) {
     const u = authOrThrow_(payload?.token);
 
     if (u.rol !== "ADMIN" && u.rol !== "MUNICIPAL" && u.rol !== "JURISDICCIONAL") {
-      return { ok:false, error:"Sin permisos para exportar matriz de biológicos." };
+      return { ok:false, error:"Sin permisos para exportar matriz de biolÃ³gicos." };
     }
 
     const fechaPedido = normalize_(payload?.fechaPedido) || getProgrammedPedidoDate_();
@@ -4210,7 +4271,7 @@ function api_bioExportMatrix(payload) {
 
     for (let i = 0; i < municipiosSolicitados.length; i++) {
       if (!municipiosValidos.includes(municipiosSolicitados[i])) {
-        return { ok:false, error:"Uno o más municipios seleccionados no están permitidos para este perfil." };
+        return { ok:false, error:"Uno o mÃ¡s municipios seleccionados no estÃ¡n permitidos para este perfil." };
       }
     }
 
@@ -4257,7 +4318,7 @@ function api_bioGetDatesForMonth(payload) {
 
     const month = normalize_(payload?.month);
     const year = normalize_(payload?.year);
-    if (!month || !year) throw new Error("Mes y año requeridos.");
+    if (!month || !year) throw new Error("Mes y aÃ±o requeridos.");
 
     const prefix = `${year}-${month}`;
     const sh = ensureBioCaptureSheet_();
@@ -4290,29 +4351,29 @@ function api_changeMyPassword(payload) {
     const newPassword = normalize_(payload?.newPassword);
     const confirmPassword = normalize_(payload?.confirmPassword);
 
-    requireNonEmpty_("Contraseña actual", currentPassword);
-    requireNonEmpty_("Nueva contraseña", newPassword);
-    requireNonEmpty_("Confirmación de nueva contraseña", confirmPassword);
+    requireNonEmpty_("ContraseÃ±a actual", currentPassword);
+    requireNonEmpty_("Nueva contraseÃ±a", newPassword);
+    requireNonEmpty_("ConfirmaciÃ³n de nueva contraseÃ±a", confirmPassword);
 
-    // Verificar contraseña actual (soporta haseada o plano para migración)
+    // Verificar contraseÃ±a actual (soporta haseada o plano para migraciÃ³n)
     const currentHash = hashPassword_(currentPassword);
     const storedPass = u.password;
     let authOk = isHashed_(storedPass) ? (storedPass === currentHash) : (storedPass === currentPassword);
 
     if (!authOk) {
-      return { ok:false, error:"La contraseña actual no es correcta." };
+      return { ok:false, error:"La contraseÃ±a actual no es correcta." };
     }
 
     if (newPassword !== confirmPassword) {
-      return { ok:false, error:"La nueva contraseña y su confirmación no coinciden." };
+      return { ok:false, error:"La nueva contraseÃ±a y su confirmaciÃ³n no coinciden." };
     }
 
     if (newPassword.length < 6) {
-      return { ok:false, error:"La nueva contraseña debe tener al menos 6 caracteres." };
+      return { ok:false, error:"La nueva contraseÃ±a debe tener al menos 6 caracteres." };
     }
 
     if (newPassword === currentPassword) {
-      return { ok:false, error:"La nueva contraseña debe ser distinta a la actual." };
+      return { ok:false, error:"La nueva contraseÃ±a debe ser distinta a la actual." };
     }
 
     const newHash = hashPassword_(newPassword);
@@ -4323,7 +4384,7 @@ function api_changeMyPassword(payload) {
 
     clearUserCache_(u.usuario);
 
-    return { ok:true, message:"Contraseña actualizada correctamente y protegida." };
+    return { ok:true, message:"ContraseÃ±a actualizada correctamente y protegida." };
   } catch (e) {
     return { ok:false, error:String(e.message || e) };
   }
@@ -4335,11 +4396,11 @@ function api_saveMyEmail(payload) {
     const sh = ensureUsersSheet_();
 
     const email = normalize_(payload?.email).toLowerCase();
-    requireNonEmpty_("Correo electrónico", email);
+    requireNonEmpty_("Correo electrÃ³nico", email);
 
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     if (!emailOk) {
-      return { ok:false, error:"Correo electrónico inválido." };
+      return { ok:false, error:"Correo electrÃ³nico invÃ¡lido." };
     }
 
     sh.getRange(u.row, 8).setValue(email); // email
@@ -4364,7 +4425,7 @@ function api_export(payload) {
     let fechaFin = normalizeDateKey_(payload?.fechaFin || fechaInicio);
 
     if (!["SR", "CONS"].includes(tipo)) {
-      return { ok:false, error:"Tipo de exportación inválido. Usa SR o CONS." };
+      return { ok:false, error:"Tipo de exportaciÃ³n invÃ¡lido. Usa SR o CONS." };
     }
 
     if (tipo === "CONS") {
@@ -4386,7 +4447,7 @@ function api_export(payload) {
       }
 
       if (!isValidConsumiblesDate_(fechaBase) && fechaBase !== rango.fechaCorteResumen) {
-        return { ok:false, error:"La fecha seleccionada no corresponde a una fecha válida de consumibles." };
+        return { ok:false, error:"La fecha seleccionada no corresponde a una fecha vÃ¡lida de consumibles." };
       }
 
       if (fechaInicio > fechaFin) {
@@ -4528,7 +4589,7 @@ function api_adminCreateUser(payload) {
     requireNonEmpty_("rol", rol);
 
     if (!["ADMIN","JURISDICCIONAL","MUNICIPAL","UNIDAD"].includes(rol)) {
-      throw new Error("rol inválido. Usa ADMIN, JURISDICCIONAL, MUNICIPAL o UNIDAD.");
+      throw new Error("rol invÃ¡lido. Usa ADMIN, JURISDICCIONAL, MUNICIPAL o UNIDAD.");
     }
 
 
@@ -4561,7 +4622,7 @@ function api_adminCreateUser(payload) {
 
     clearUserCache_(usuario);
 
-    return { ok:true, message:"Usuario creado y contraseña protegida." };
+    return { ok:true, message:"Usuario creado y contraseÃ±a protegida." };
 
   } catch (e) {
     return { ok:false, error:String(e.message || e) };
@@ -4589,7 +4650,7 @@ function api_adminResetPassword(payload) {
 
     clearUserCache_(u.usuario);
 
-    return { ok:true, message:"Contraseña actualizada y protegida. El usuario deberá cambiarla al iniciar sesión." };
+    return { ok:true, message:"ContraseÃ±a actualizada y protegida. El usuario deberÃ¡ cambiarla al iniciar sesiÃ³n." };
   } catch (e) {
     return { ok:false, error:String(e.message || e) };
   }
@@ -4603,14 +4664,14 @@ function api_adminSetActive(payload) {
     const activo = (normalize_(payload?.activo) || "").toUpperCase();
 
     requireNonEmpty_("usuario", usuario);
-    if (!["SI","NO"].includes(activo)) throw new Error("activo inválido (SI/NO).");
+    if (!["SI","NO"].includes(activo)) throw new Error("activo invÃ¡lido (SI/NO).");
 
     const u = getUser_(usuario);
     if (!u) throw new Error("Usuario no encontrado.");
 
     sh.getRange(u.row, 7).setValue(activo);
     clearUserCache_(u.usuario);
-    return { ok:true, message:"Estatus actualizado en base y caché." };
+    return { ok:true, message:"Estatus actualizado en base y cachÃ©." };
   } catch (e) {
     return { ok:false, error:String(e.message || e) };
   }
@@ -4819,7 +4880,7 @@ function api_adminCaptureOverview(payload) {
     const tipo = String(payload?.tipo || "SR").trim().toUpperCase();
 
     if (!["SR", "CONS"].includes(tipo)) {
-      return { ok:false, error:"Tipo inválido. Usa SR o CONS." };
+      return { ok:false, error:"Tipo invÃ¡lido. Usa SR o CONS." };
     }
 
     const visibles = getVisibleUnits_(u);
@@ -4855,7 +4916,7 @@ function api_adminCaptureOverview(payload) {
               clues: x.clues,
               unidad: x.unidad
             })),
-            mensaje: "La consulta de consumibles solo aplica para fechas válidas de consumibles."
+            mensaje: "La consulta de consumibles solo aplica para fechas vÃ¡lidas de consumibles."
           }
         };
       }
@@ -4919,6 +4980,10 @@ function api_adminCaptureOverview(payload) {
       String(a.unidad).localeCompare(String(b.unidad), "es")
     );
 
+    // âœ… Inyectar Cumplimiento Operativo real (Mes actual)
+    const complianceSnapshot = getOperationalComplianceSnapshot_(u);
+    const compliancePct = complianceSnapshot?.summary?.compliance_pct || 0;
+
     return {
       ok:true,
       data:{
@@ -4928,6 +4993,7 @@ function api_adminCaptureOverview(payload) {
         total_unidades: visibles.length,
         total_capturadas: capturadas.length,
         total_faltantes: faltantes.length,
+        compliance_pct: compliancePct,
         capturadas,
         faltantes,
         mensaje
@@ -5015,20 +5081,20 @@ function api_requestPasswordReset(payload) {
 
     const url = `${baseWebAppUrl_()}?mode=reset&t=${encodeURIComponent(token)}`;
 
-    const subject = "Recuperación de contraseña - JS1 Reportes";
+    const subject = "RecuperaciÃ³n de contraseÃ±a - JS1 Reportes";
     const body = `
       <p style="margin:0 0 16px 0;color:#1A1C1E;">Hola <b>${u.usuario}</b>,</p>
-      <p style="margin:0 0 16px 0;color:#44474E;">Se solicitó restablecer la contraseña de tu cuenta en el sistema de reportes <b>JS1</b>.</p>
+      <p style="margin:0 0 16px 0;color:#44474E;">Se solicitÃ³ restablecer la contraseÃ±a de tu cuenta en el sistema de reportes <b>JS1</b>.</p>
       
       <div style="margin:24px 0; text-align:center;">
         <!--[if mso]>
         <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:52px;v-text-anchor:middle;width:240px;" arcsize="54%" stroke="f" fillcolor="#001B3D">
           <w:anchorlock/>
-          <center style="color:#ffffff;font-family:sans-serif;font-size:16px;font-weight:bold;">Restablecer contraseña</center>
+          <center style="color:#ffffff;font-family:sans-serif;font-size:16px;font-weight:bold;">Restablecer contraseÃ±a</center>
         </v:roundrect>
         <![endif]-->
         <a href="${url}" style="background-color:#001B3D;border-radius:28px;color:#ffffff;display:inline-block;font-family:sans-serif;font-size:16px;font-weight:900;line-height:52px;text-align:center;text-decoration:none;width:240px;-webkit-text-size-adjust:none;mso-hide:all;box-shadow:0 12px 24px rgba(0,27,61,0.2);">
-          Restablecer contraseña
+          Restablecer contraseÃ±a
         </a>
       </div>
 
@@ -5037,19 +5103,19 @@ function api_requestPasswordReset(payload) {
         <div style="font-size:13px;word-break:break-all;color:#001B3D;">${url}</div>
       </div>
       
-      <p style="margin:20px 0 0 0;font-size:13px;color:#44474E;">Este enlace expirará en <b>30 minutos</b> por seguridad. Si tú no solicitaste este cambio, puedes ignorar este mensaje.</p>
+      <p style="margin:20px 0 0 0;font-size:13px;color:#44474E;">Este enlace expirarÃ¡ en <b>30 minutos</b> por seguridad. Si tÃº no solicitaste este cambio, puedes ignorar este mensaje.</p>
     `;
 
     const html = buildInstitutionalEmailShell_({
-      title: "Recuperación de cuenta",
+      title: "RecuperaciÃ³n de cuenta",
       subtitle: "Acceso seguro al sistema de reportes",
       body,
-      footer: "Jurisdicción Sanitaria 1 · SESEQ · Seguridad informática"
+      footer: "JurisdicciÃ³n Sanitaria 1 Â· SESEQ Â· Seguridad informÃ¡tica"
     });
 
     sendEmail_(u.email, subject, html);
 
-    return { ok:true, message:"Se envió un correo de recuperación." };
+    return { ok:true, message:"Se enviÃ³ un correo de recuperaciÃ³n." };
   } catch (e) {
     return { ok:false, error:String(e.message || e) };
   }
@@ -5062,28 +5128,28 @@ function api_resetPasswordWithToken(payload) {
     const confirmPassword = normalize_(payload?.confirmPassword);
 
     requireNonEmpty_("Token", token);
-    requireNonEmpty_("Nueva contraseña", newPassword);
-    requireNonEmpty_("Confirmación de nueva contraseña", confirmPassword);
+    requireNonEmpty_("Nueva contraseÃ±a", newPassword);
+    requireNonEmpty_("ConfirmaciÃ³n de nueva contraseÃ±a", confirmPassword);
 
     if (newPassword !== confirmPassword) {
-      return { ok:false, error:"La nueva contraseña y la confirmación no coinciden." };
+      return { ok:false, error:"La nueva contraseÃ±a y la confirmaciÃ³n no coinciden." };
     }
 
     if (newPassword.length < 6) {
-      return { ok:false, error:"La nueva contraseña debe tener al menos 6 caracteres." };
+      return { ok:false, error:"La nueva contraseÃ±a debe tener al menos 6 caracteres." };
     }
 
     const u = getUserByResetToken_(token);
     if (!u) {
-      return { ok:false, error:"El enlace de recuperación no es válido." };
+      return { ok:false, error:"El enlace de recuperaciÃ³n no es vÃ¡lido." };
     }
 
     if (u.activo !== "SI") {
-      return { ok:false, error:"La cuenta está inactiva." };
+      return { ok:false, error:"La cuenta estÃ¡ inactiva." };
     }
 
     if (isResetTokenExpired_(u.reset_expires)) {
-      return { ok:false, error:"El enlace de recuperación ya expiró." };
+      return { ok:false, error:"El enlace de recuperaciÃ³n ya expirÃ³." };
     }
 
     const sh = ensureUsersSheet_();
@@ -5093,7 +5159,7 @@ function api_resetPasswordWithToken(payload) {
     sh.getRange(u.row, 10).setValue("");         // reset_token
     sh.getRange(u.row, 11).setValue("");         // reset_expires
 
-    return { ok:true, message:"Contraseña restablecida correctamente." };
+    return { ok:true, message:"ContraseÃ±a restablecida correctamente." };
   } catch (e) {
     return { ok:false, error:String(e.message || e) };
   }
@@ -5112,7 +5178,7 @@ function sendPendingUnitReminders_() {
   const bloque = getCurrentReminderBlock_();
 
   if (!status.canCaptureBio && !status.canCaptureConsumibles) {
-    Logger.log("sendPendingUnitReminders_: sin ventana activa de biológico ni consumibles.");
+    Logger.log("sendPendingUnitReminders_: sin ventana activa de biolÃ³gico ni consumibles.");
     return;
   }
 
@@ -5133,15 +5199,15 @@ function sendPendingUnitReminders_() {
       }
 
       const pendientes = [];
-      if (faltaBIO) pendientes.push("Pedido de biológico");
+      if (faltaBIO) pendientes.push("Pedido de biolÃ³gico");
       if (faltaCONS) pendientes.push("Consumibles");
 
-      const subject = `Recordatorio de captura pendiente — ${unit.clues} ${unit.unidad}`;
+      const subject = `Recordatorio de captura pendiente â€” ${unit.clues} ${unit.unidad}`;
       const appUrl = baseWebAppUrl_();
 
       const body = `
         <p style="margin:0 0 10px 0;font-size:14px;color:#334155;">
-          Esta es una notificación automática del sistema <b>JS1 Reportes</b>.
+          Esta es una notificaciÃ³n automÃ¡tica del sistema <b>JS1 Reportes</b>.
         </p>
 
         <div style="margin:0 0 12px 0;">
@@ -5161,7 +5227,7 @@ function sendPendingUnitReminders_() {
           faltaBIO
             ? `
             <div style="margin-top:14px;padding:12px 14px;border-radius:14px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;font-size:14px;font-weight:700;">
-              <b>Pedido de biológico:</b> disponible del ${status.bioWindowStart} al ${status.bioWindowEnd}. Fecha programada: ${status.bioFechaProgramada}.
+              <b>Pedido de biolÃ³gico:</b> disponible del ${status.bioWindowStart} al ${status.bioWindowEnd}. Fecha programada: ${status.bioFechaProgramada}.
             </div>
             `
             : ""
@@ -5171,7 +5237,7 @@ function sendPendingUnitReminders_() {
           faltaCONS
             ? `
             <div style="margin-top:14px;padding:12px 14px;border-radius:14px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:14px;font-weight:700;">
-              <b>Consumibles:</b> la captura corresponde al día operativo ${status.consumiblesCaptureDate}.
+              <b>Consumibles:</b> la captura corresponde al dÃ­a operativo ${status.consumiblesCaptureDate}.
             </div>
             `
             : ""
@@ -5194,16 +5260,16 @@ function sendPendingUnitReminders_() {
         </div>
 
         <div style="margin-top:10px;font-size:12px;color:#64748b;word-break:break-all;">
-          Si el botón no abre directamente, copia este enlace en tu navegador:<br>
+          Si el botÃ³n no abre directamente, copia este enlace en tu navegador:<br>
           ${appUrl}
         </div>
       `;
 
       const html = buildInstitutionalEmailShell_({
         title: "Recordatorio de captura",
-        subtitle: "Seguimiento automático por unidad",
+        subtitle: "Seguimiento automÃ¡tico por unidad",
         body,
-        footer: "Jurisdicción Sanitaria 1 · SESEQ · Recordatorio operativo"
+        footer: "JurisdicciÃ³n Sanitaria 1 Â· SESEQ Â· Recordatorio operativo"
       });
 
       sendEmail_(emails, subject, html);
@@ -5273,7 +5339,7 @@ function sendDailyMunicipioSummary_() {
         ${buildMetricBoxHtml_("Total de unidades", totalUnits, "blue")}
         ${
           (status.canCaptureBio || status.isBioWindowCloseDate)
-            ? buildMetricBoxHtml_("Cumplimiento biológico", `${cumplimientoBIO}%`, cumplimientoBIO >= 90 ? "green" : (cumplimientoBIO >= 70 ? "amber" : "red"))
+            ? buildMetricBoxHtml_("Cumplimiento biolÃ³gico", `${cumplimientoBIO}%`, cumplimientoBIO >= 90 ? "green" : (cumplimientoBIO >= 70 ? "amber" : "red"))
             : ""
         }
         ${
@@ -5287,7 +5353,7 @@ function sendDailyMunicipioSummary_() {
         (status.canCaptureBio || status.isBioWindowCloseDate)
           ? `
           <div style="border:1px solid #dbe7f5;border-radius:16px;padding:16px;background:#ffffff;margin:12px 0;">
-            <div style="font-size:18px;font-weight:800;color:#0f172a;margin-bottom:10px;">Pedido de biológico</div>
+            <div style="font-size:18px;font-weight:800;color:#0f172a;margin-bottom:10px;">Pedido de biolÃ³gico</div>
             <div style="font-size:14px;color:#475569;margin-bottom:12px;">
               <b>Fecha programada:</b> ${status.bioFechaProgramada} &nbsp;&nbsp; | &nbsp;&nbsp;
               <b>Ventana:</b> ${status.bioWindowStart} al ${status.bioWindowEnd}
@@ -5299,12 +5365,12 @@ function sendDailyMunicipioSummary_() {
 
             <div style="margin-top:8px;">
               <div style="font-size:13px;font-weight:800;color:#166534;margin-bottom:8px;">Unidades que capturaron</div>
-              ${renderInstitutionalUnitListHtml_(group.bio_capturadas, "Ninguna unidad capturó pedido de biológico.", true)}
+              ${renderInstitutionalUnitListHtml_(group.bio_capturadas, "Ninguna unidad capturÃ³ pedido de biolÃ³gico.", true)}
             </div>
 
             <div style="margin-top:16px;">
               <div style="font-size:13px;font-weight:800;color:#b45309;margin-bottom:8px;">Unidades pendientes</div>
-              ${renderInstitutionalUnitListHtml_(group.bio_faltantes, "No hay pendientes de pedido de biológico.", false)}
+              ${renderInstitutionalUnitListHtml_(group.bio_faltantes, "No hay pendientes de pedido de biolÃ³gico.", false)}
             </div>
           </div>
           `
@@ -5324,7 +5390,7 @@ function sendDailyMunicipioSummary_() {
 
             <div style="margin-top:8px;">
               <div style="font-size:13px;font-weight:800;color:#166534;margin-bottom:8px;">Unidades que capturaron</div>
-              ${renderInstitutionalUnitListHtml_(group.cons_capturadas, "Ninguna unidad capturó consumibles.", true)}
+              ${renderInstitutionalUnitListHtml_(group.cons_capturadas, "Ninguna unidad capturÃ³ consumibles.", true)}
             </div>
 
             <div style="margin-top:16px;">
@@ -5360,19 +5426,19 @@ function sendDailyMunicipioSummary_() {
 
     let motivoResumen = "";
     if ((today === status.consumiblesSummaryCutoffDate) && status.isBioWindowCloseDate) {
-      motivoResumen = "Consumibles + cierre de ventana de pedido biológico";
+      motivoResumen = "Consumibles + cierre de ventana de pedido biolÃ³gico";
     } else if (today === status.consumiblesSummaryCutoffDate) {
       motivoResumen = "Cierre operativo de consumibles";
     } else if (status.isBioWindowCloseDate) {
-      motivoResumen = "Cierre de ventana de pedido biológico";
+      motivoResumen = "Cierre de ventana de pedido biolÃ³gico";
     }
 
-    const subject = `Resumen de captura — ${group.municipio} — ${status.fecha}`;
+    const subject = `Resumen de captura â€” ${group.municipio} â€” ${status.fecha}`;
     const html = buildInstitutionalEmailShell_({
       title: "Resumen de captura",
-      subtitle: `${motivoResumen} · ${group.municipio}`,
+      subtitle: `${motivoResumen} Â· ${group.municipio}`,
       body,
-      footer: "Jurisdicción Sanitaria 1 · SESEQ · Resumen operativo"
+      footer: "JurisdicciÃ³n Sanitaria 1 Â· SESEQ Â· Resumen operativo"
     });
 
     sendEmail_(toList, subject, html);
@@ -5505,7 +5571,7 @@ function getHistoryMetricsByVisibleUnits_(user, fromYmd, toYmd) {
   const consSh = getSheet_(SHEET_CONS);
   const bioSh = ensureBioCaptureSheet_();
 
-  Logger.log("Unidades visibles para métricas: " + units.length);
+  Logger.log("Unidades visibles para mÃ©tricas: " + units.length);
 
   const consLast = consSh.getLastRow();
   const bioLast = bioSh.getLastRow();
@@ -5561,7 +5627,7 @@ function getHistoryMetricsByVisibleUnits_(user, fromYmd, toYmd) {
     }
   });
 
-  Logger.log("Rows métricas calculadas: " + units.length);
+  Logger.log("Rows mÃ©tricas calculadas: " + units.length);
 
   return units.map(u => {
     let consCapturas = 0;
@@ -5637,7 +5703,7 @@ function api_getTodayReports(payload) {
 
     const fecha = normalizeDateKey_(payload?.fecha || todayStr_());
 
-    // ===== EXISTENCIA DE BIOLÓGICOS =====
+    // ===== EXISTENCIA DE BIOLÃ“GICOS =====
     const shSR = getSheet_(SHEET_SR_EXISTENCIA);
     ensureHeader_(shSR, [
       "id","timestamp","fecha","municipio","clues","unidad",
@@ -5753,7 +5819,7 @@ function api_historyMetrics(payload) {
     const u = authOrThrow_(payload?.token);
 
     if (u.rol !== "ADMIN" && u.rol !== "MUNICIPAL" && u.rol !== "JURISDICCIONAL") {
-      return { ok:false, error:"Sin permisos para consultar métricas históricas." };
+      return { ok:false, error:"Sin permisos para consultar mÃ©tricas histÃ³ricas." };
     }
 
 
@@ -5761,7 +5827,7 @@ function api_historyMetrics(payload) {
     const fromYmd = normalizeDateKey_(payload?.fechaInicio || toYmd);
 
     if (!fromYmd || !toYmd) {
-      return { ok:false, error:"Fechas inválidas." };
+      return { ok:false, error:"Fechas invÃ¡lidas." };
     }
 
     if (fromYmd > toYmd) {
@@ -5796,7 +5862,7 @@ function api_unitCatalog(payload) {
     const u = authOrThrow_(payload?.token);
 
     if (u.rol !== "ADMIN" && u.rol !== "MUNICIPAL" && u.rol !== "JURISDICCIONAL") {
-      return { ok:false, error:"Sin permisos para consultar catálogo de unidades." };
+      return { ok:false, error:"Sin permisos para consultar catÃ¡logo de unidades." };
     }
 
 
@@ -5905,5 +5971,163 @@ function api_notificationUserCatalog(payload) {
     return { ok:true, data: out };
   } catch (e) {
     return { ok:false, error:String(e.message || e) };
+  }
+}
+
+/** ===== SUPERVISIONES: LOG Y CONSULTA ===== **/
+
+function ensureSupervisionSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SHEET_SUPERVISIONES);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_SUPERVISIONES);
+    const headers = [
+      "CLUES", "UNIDAD", "MUNICIPIO", "FECHA_SUPERVISION", 
+      "FECHA_SUBIDA", "SUPERVISOR_ID", "SUPERVISOR_NOMBRE", 
+      "FILE_ID", "URL_DRIVE"
+    ];
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers])
+         .setBackground("#041E42").setFontColor("white").setFontWeight("bold");
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+/**
+ * Mapea el ID de usuario al nombre completo del supervisor basado en la relaciÃ³n oficial JS1.
+ */
+function getSupervisorFullName_(id) {
+  if (!id) return "DESCONOCIDO";
+  const mapping = {
+    "STEFANÃA_J1": "STEFANÃA GONZÃLEZ RÃNGEL",
+    "ANA_JS1": "ANA MARÃA RAMÃREZ MUNGUÃA",
+    "ALMA_JS1": "ALMA DELIA HERNÃNDEZ ESQUIVEL",
+    "JULIA_JS1": "ANA JULIA MENDOZA HERNÃNDEZ",
+    "CARLOS_JS1": "CARLOS BECERRA DORANTES"
+  };
+  return mapping[id] || id;
+}
+
+function logSupervisionRecord_(data) {
+  try {
+    const sheet = ensureSupervisionSheet_();
+    const unit = getUnitByClues_(data.clues);
+    const muni = unit ? unit.municipio : "DESCONOCIDO";
+    
+    sheet.appendRow([
+      data.clues,
+      data.unidad,
+      muni,
+      data.supervisionDate,
+      data.uploadDate,
+      data.supervisorId,
+      getSupervisorFullName_(data.supervisorId),
+      data.fileId,
+      data.fileUrl
+    ]);
+  } catch (e) {
+    console.error("Error logSupervisionRecord: " + e);
+  }
+}
+
+/**
+ * Utilidad Ãºnica para corregir registros vacÃ­os de nombres en la hoja de supervisiones.
+ */
+function fixExistingSupervisionNames() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_SUPERVISIONES);
+  if (!sheet) return "Error: Hoja no encontrada";
+
+  const rows = sheet.getDataRange().getValues();
+  if (rows.length <= 1) return "Hoja vacÃ­a";
+
+  const headers = rows[0];
+  const idIdx = headers.indexOf("SUPERVISOR_ID");
+  const nameIdx = headers.indexOf("SUPERVISOR_NOMBRE");
+
+  if (idIdx === -1 || nameIdx === -1) return "Error: Columnas no encontradas";
+
+  let fixedCount = 0;
+  for (let i = 1; i < rows.length; i++) {
+    const id = rows[i][idIdx];
+    const currentName = rows[i][nameIdx];
+    
+    if (id && (!currentName || currentName === "DESCONOCIDO")) {
+      const realName = getSupervisorFullName_(id);
+      if (realName !== id) {
+        sheet.getRange(i + 1, nameIdx + 1).setValue(realName);
+        fixedCount++;
+      }
+    }
+  }
+  return "Se corrigieron " + fixedCount + " registros.";
+}
+
+function api_getSupervisions(payload) {
+  try {
+    const u = authOrThrow_(payload?.token);
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName(SHEET_SUPERVISIONES);
+    if (!sheet) return { ok: true, data: [] };
+
+    const lastRow = sheet.getLastRow();
+    const lastCol = sheet.getLastColumn();
+    
+    if (lastRow <= 1) return { ok: true, data: [] };
+
+    // OptimizaciÃ³n: Solo leer el rango que tiene datos reales
+    const rows = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+    const headers = rows.shift();
+    
+    console.log("api_getSupervisions: Procesando " + rows.length + " filas");
+
+    let rawData = rows.map(r => {
+      let obj = {};
+      headers.forEach((h, i) => {
+        if (h) {
+          // Normalizar encabezado: Trim, Uppercase y reemplazo de espacios por guión bajo
+          const cleanHeader = String(h).trim().toUpperCase().replace(/\s+/g, "_");
+          obj[cleanHeader] = r[i];
+        }
+      });
+      return obj;
+    });
+
+    // Filtro por Rol
+    let filtered = [];
+    if (u.rol === "ADMIN" || u.rol === "JURISDICCIONAL") {
+      filtered = rawData;
+    } else if (u.rol === "MUNICIPAL") {
+      filtered = rawData.filter(x => canSeeMunicipio_(u, x.MUNICIPIO));
+    } else if (u.rol === "UNIDAD") {
+      const targetClues = String(u.clues || "").trim().toUpperCase();
+      console.log("api_getSupervisions [UNIDAD]: Buscando CLUES " + targetClues);
+      filtered = rawData.filter(x => {
+        const itemClues = String(x.CLUES || "").trim().toUpperCase();
+        return itemClues === targetClues;
+      });
+    }
+
+    // Filtro especÃ­fico (Si se pasa targetClues explÃ­citamente y el rol permite verlo)
+    if (payload.targetClues) {
+      const cleanTarget = String(payload.targetClues || "").trim().toUpperCase();
+      filtered = filtered.filter(x => {
+        const itemClues = String(x.CLUES || "").trim().toUpperCase();
+        return itemClues === cleanTarget;
+      });
+    }
+
+    // Ordenar descendente (SupervisiÃ³n mÃ¡s reciente primero)
+    filtered.sort((a,b) => {
+      const da = a.FECHA_SUPERVISION ? new Date(a.FECHA_SUPERVISION) : new Date(0);
+      const db = b.FECHA_SUPERVISION ? new Date(b.FECHA_SUPERVISION) : new Date(0);
+      return db - da;
+    });
+
+    console.log("api_getSupervisions: Retornando " + filtered.length + " registros filtrados");
+    return { ok: true, data: filtered };
+  } catch (e) {
+    console.error("Error api_getSupervisions: " + e);
+    return { ok: false, error: String(e.message || e) };
   }
 }
