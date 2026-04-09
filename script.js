@@ -1648,6 +1648,7 @@ async function loadHomeLogos() {
     const btnNotifMarkVisibleRead = $("btnNotifMarkVisibleRead");
     const btnTopNotifMarkVisibleRead = $("btnTopNotifMarkVisibleRead");
     const btnTopNotifClose = $("btnTopNotifClose");
+    const btnTopNotifOnlyUnread = $("btnTopNotifOnlyUnread");
 
     const notifSearchHandler = debounce((ev) => {
       handleNotifSearchInput(ev?.target?.value || "");
@@ -3166,25 +3167,11 @@ async function loadHomeLogos() {
   }
 
   function bindAuthUiEvents() {
-    if ($("btnForgotPassword")) {
-      $("btnForgotPassword").onclick = () => openForgotModal();
-    }
-
-    if ($("btnForgotClose")) {
-      $("btnForgotClose").onclick = () => closeForgotModal();
-    }
-
-    if ($("btnForgotSend")) {
-      $("btnForgotSend").onclick = () => requestPasswordResetFlow();
-    }
-
-    if ($("btnSaveMyPassword")) {
-      $("btnSaveMyPassword").onclick = () => saveMyPasswordFlow();
-    }
-
-    if ($("btnPwdClose")) {
-      $("btnPwdClose").onclick = () => closePasswordModal();
-    }
+    $("btnForgotPassword") && ($("btnForgotPassword").onclick = () => openForgotModal());
+    $("btnForgotClose") && ($("btnForgotClose").onclick = () => closeForgotModal());
+    $("btnForgotSend") && ($("btnForgotSend").onclick = () => requestPasswordResetFlow());
+    $("btnSaveMyPassword") && ($("btnSaveMyPassword").onclick = () => saveMyPasswordFlow());
+    $("btnPwdClose") && ($("btnPwdClose").onclick = () => closePasswordModal());
   }
 
   function bindHistoryUiEvents() {
@@ -5037,10 +5024,10 @@ async function loadHomeLogos() {
   }
 
   function renderCaptureSummary(data) {
-    $("sumFecha").textContent = data?.fecha || "—";
-    $("sumTotal").textContent = data?.total_unidades ?? 0;
-    $("sumCapturadas").textContent = data?.total_capturadas ?? 0;
-    $("sumFaltantes").textContent = data?.total_faltantes ?? 0;
+    if ($("sumFecha")) $("sumFecha").textContent = data?.fecha || "—";
+    if ($("sumTotal")) $("sumTotal").textContent = data?.total_unidades ?? 0;
+    if ($("sumCapturadas")) $("sumCapturadas").textContent = data?.total_capturadas ?? 0;
+    if ($("sumFaltantes")) $("sumFaltantes").textContent = data?.total_faltantes ?? 0;
 
     const capturadas = data?.capturadas || [];
     const faltantes = data?.faltantes || [];
@@ -5163,9 +5150,9 @@ async function loadHomeLogos() {
 
     showRightColumn(true);
 
-    $("who").textContent = `${user.clues || "—"} — ${user.unidad || "—"}`;
-    $("welcome").textContent = `Hola, ${user.usuario}`;
-    $("rolTxt").textContent = `Perfil: ${user.rol || "UNIDAD"}`;
+    if ($("who")) $("who").textContent = `${user.clues || " — "} — ${user.unidad || " — "}`;
+    if ($("welcome")) $("welcome").textContent = `Hola, ${user.usuario}`;
+    if ($("rolTxt")) $("rolTxt").textContent = `Perfil: ${user.rol || "UNIDAD"}`;
     if ($("tabCAPText")) {
       $("tabCAPText").textContent = (user.rol === "UNIDAD") ? "Captura" : "Panel";
     }
@@ -5718,7 +5705,7 @@ async function loadHomeLogos() {
     }
   });
 
-  $("btnSaveSR").onclick = async () => {
+  if ($("btnSaveSR")) $("btnSaveSR").onclick = async () => {
     if (isBtnBusy("btnSaveSR")) return;
     setBtnBusy("btnSaveSR", true, EDIT_SR ? "Actualizando…" : "Guardando…");
     showOverlay(
@@ -5866,7 +5853,7 @@ async function loadHomeLogos() {
 
   refreshExportSplitUi();
 
-  $("btnSaveCONS").onclick = async () => {
+  if ($("btnSaveCONS")) $("btnSaveCONS").onclick = async () => {
     if (isBtnBusy("btnSaveCONS")) return;
     setBtnBusy("btnSaveCONS", true, EDIT_CONS ? "Actualizando…" : "Guardando…");
     showOverlay(
@@ -5962,7 +5949,7 @@ async function loadHomeLogos() {
     }
   };
 
-  $("btnSaveBIO").onclick = async () => {
+  if ($("btnSaveBIO")) $("btnSaveBIO").onclick = async () => {
     if (isBtnBusy("btnSaveBIO")) return;
 
     const bioValidation = refreshBioAlerts(true);
