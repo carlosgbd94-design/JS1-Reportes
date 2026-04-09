@@ -322,7 +322,44 @@
   </div>
 
   <script>
-    const RESET_TOKEN = "<?= RESET_TOKEN ?>";
+    /** ===== VERCEL BRIDGE / GOOGLE APPS SCRIPT POLYFILL ===== **/
+    if (typeof google === 'undefined' || !google.script || !google.script.run) {
+      const GAS_URL = "https://script.google.com/macros/s/AKfycby3en_qswj1PmE6o80nypsDM6Gw4kueRUimNSgMKJxzDojRFCsXBjFZngR9UpnkYL0n/exec";
+      window.google = window.google || {};
+      window.google.script = window.google.script || {};
+      
+      const createPolyfillRun = () => {
+        const state = { success: null, failure: null };
+        const handler = {
+          get(target, prop) {
+            if (prop === 'withSuccessHandler') return (fn) => { state.success = fn; return new Proxy(target, handler); };
+            if (prop === 'withFailureHandler') return (fn) => { state.failure = fn; return new Proxy(target, handler); };
+            return async (...args) => {
+              const payload = (prop === 'api') ? args[0] : { action: prop, payload: args[0] };
+              try {
+                const response = await fetch(GAS_URL, {
+                  method: 'POST',
+                  body: JSON.stringify(payload),
+                  headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                });
+                const result = await response.json();
+                if (state.success) state.success(result);
+                return result;
+              } catch (err) {
+                console.error("GAS Bridge Error:", err);
+                if (state.failure) state.failure(err);
+                throw err;
+              }
+            };
+          }
+        };
+        return new Proxy({}, handler);
+      };
+      window.google.script.run = createPolyfillRun();
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const RESET_TOKEN = params.get("t") || "";
     const $ = (id) => document.getElementById(id);
 
     function showMsg(text, ok) {
@@ -375,7 +412,7 @@
           }, 50);
 
           setTimeout(() => {
-            window.location.href = "<?= ScriptApp.getService().getUrl() ?>";
+            window.location.href = window.location.origin;
           }, 3000);
         } else {
           showMsg(r.error || "Error desconocido.", false);
