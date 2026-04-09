@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -10,118 +11,140 @@
   <title>Reportes y existencias Jurisdicción Sanitaria 1</title>
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
-<div class="wrap">
-  <div class="top">
-    <div class="topInner">
-      <div class="brandCenter">
-        <div class="brandMain">
-          <div class="logoBadge" aria-label="Logos institucionales">
-            <img id="logoA" src="https://raw.githubusercontent.com/carlosgbd94-design/Logos/910b6a26a851790265ab2b5cb21d1e5759e239d3/Seseq_vertical_2025.png" alt="SESEQ">
-            <img id="logoB" src="https://raw.githubusercontent.com/carlosgbd94-design/Logos/refs/heads/main/logo_Q.png" alt="Gobierno de Querétaro">
+  <div class="wrap">
+    <div class="top">
+      <div class="topInner">
+        <div class="brandCenter">
+          <div class="brandMain">
+            <div class="logoBadge" aria-label="Logos institucionales">
+              <img id="logoA"
+                src="https://raw.githubusercontent.com/carlosgbd94-design/Logos/910b6a26a851790265ab2b5cb21d1e5759e239d3/Seseq_vertical_2025.png"
+                alt="SESEQ">
+              <img id="logoB"
+                src="https://raw.githubusercontent.com/carlosgbd94-design/Logos/refs/heads/main/logo_Q.png"
+                alt="Gobierno de Querétaro">
+            </div>
+            <div class="brandText">
+              <h1>JS1 Reportes</h1>
+              <p>Existencia de biológicos+Consumibles (solo jueves)</p>
+            </div>
           </div>
-          <div class="brandText">
-            <h1>JS1 Reportes</h1>
-            <p>Existencia de biológicos+Consumibles (solo jueves)</p>
+          <div class="statusbar statusbarPublic">
+            <span class="badge secondary" id="bFecha"><span class="material-symbols-rounded">calendar_month</span><span
+                id="hdrFecha">Fecha: —</span></span>
+            <span class="badge info" id="bHora"><span class="material-symbols-rounded">schedule</span><span
+                id="hdrHora">Hora: —</span></span>
+            <span class="badge weather-badge" id="bClima"><span
+                class="material-symbols-rounded">partly_cloudy_day</span><span id="hdrClima">—</span></span>
+            <span class="badge good" id="bGuardado" style="display:none"><span
+                class="material-symbols-rounded">save</span><span id="hdrGuardado">Guardado: —</span></span>
           </div>
-        </div>
-        <div class="statusbar statusbarPublic">
-          <span class="badge secondary" id="bFecha"><span class="material-symbols-rounded">calendar_month</span><span id="hdrFecha">Fecha: —</span></span>
-          <span class="badge info" id="bHora"><span class="material-symbols-rounded">schedule</span><span id="hdrHora">Hora: —</span></span>
-          <span class="badge weather-badge" id="bClima"><span class="material-symbols-rounded">partly_cloudy_day</span><span id="hdrClima">—</span></span>
-          <span class="badge good" id="bGuardado" style="display:none"><span class="material-symbols-rounded">save</span><span id="hdrGuardado">Guardado: —</span></span>
         </div>
       </div>
     </div>
   </div>
-</div>
 
-<div class="loginWrap">
-  <div class="card" id="cardLogin">
-    <div class="title">
-      <h2>Iniciar sesión</h2>
-      <span class="pill" id="loginStatus">—</span>
-    </div>
-    <form id="loginForm" autocomplete="on">
-      <label>Usuario</label>
-      <input id="usuario" name="username" autocomplete="username" placeholder="CLUES_NOMBRE_UNIDAD">
-      <label>Contraseña</label>
-      <input id="password" name="password" type="password" autocomplete="current-password" placeholder="••••••••">
-      <button class="btn" id="btnLogin" type="submit">Entrar</button>
-      <button class="ghostBtn" id="btnForgotPassword" type="button" style="margin-top:10px; width:100%;"><span class="material-symbols-rounded">mail</span>Olvidé mi contraseña </button>
-    </form>
-    <div class="hint">Si tarda, verás una pantalla de carga.</div>
-  </div>
-</div>
-
-<div class="grid">
-  <!-- RIGHT (APP) -->
-  <div class="gridRight" id="rightColumn" style="display:none">
-    <div class="rightLayout">
-      <!-- SIDEBAR -->
-      <div class="sideCard" id="cardSide">
-        <div class="sideTitle"><h3>Acciones</h3><span class="pill" id="capStatus">—</span></div>
-        <div class="actions">
-          <button class="iconbtn" id="btnLogout" title="Cerrar sesión"><span class="material-symbols-rounded">logout</span>Salir</button>
-          <button class="iconbtn" id="btnExport" title="Exportar reportes" style="display:none"><span class="material-symbols-rounded">download</span>Reportes</button>
-          <button class="iconbtn" id="btnOpenUpload" title="Subir evidencias" style="display:none"><span class="material-symbols-rounded">cloud_upload</span>Subir</button>
-        </div>
-        <div class="sideFactWrap">
-          <div class="sideTitle"><h3>Dato curioso</h3></div>
-          <p id="factBody">—</p>
-        </div>
+  <div class="loginWrap">
+    <div class="card" id="cardLogin">
+      <div class="title">
+        <h2>Iniciar sesión</h2>
+        <span class="pill" id="loginStatus">—</span>
       </div>
+      <form id="loginForm" autocomplete="on">
+        <label>Usuario</label>
+        <input id="usuario" name="username" autocomplete="username" placeholder="CLUES_NOMBRE_UNIDAD">
+        <label>Contraseña</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" placeholder="••••••••">
+        <button class="btn" id="btnLogin" type="submit">Entrar</button>
+        <button class="ghostBtn" id="btnForgotPassword" type="button" style="margin-top:10px; width:100%;"><span
+            class="material-symbols-rounded">mail</span>Olvidé mi contraseña </button>
+      </form>
+      <div class="hint">Si tarda, verás una pantalla de carga.</div>
+    </div>
+  </div>
 
-      <!-- MAIN STACK -->
-      <div class="mainStack">
-        <div class="card" id="cardApp">
-          <div class="title">
-            <div>
-              <h2 id="welcome">Hola</h2>
-              <div class="who" id="who"></div>
-              <div class="statusbar" style="justify-content:flex-start;margin-top:10px;gap:8px;">
-                <span class="badge good"><span id="rolTxt">Rol: —</span></span>
-                <span class="badge info"><span id="munTxt">Municipio: —</span></span>
+  <div class="grid">
+    <!-- RIGHT (APP) -->
+    <div class="gridRight" id="rightColumn" style="display:none">
+      <div class="rightLayout">
+        <!-- SIDEBAR -->
+        <div class="sideCard" id="cardSide">
+          <div class="sideTitle">
+            <h3>Acciones</h3><span class="pill" id="capStatus">—</span>
+          </div>
+          <div class="actions">
+            <button class="iconbtn" id="btnLogout" title="Cerrar sesión"><span
+                class="material-symbols-rounded">logout</span>Salir</button>
+            <button class="iconbtn" id="btnExport" title="Exportar reportes" style="display:none"><span
+                class="material-symbols-rounded">download</span>Reportes</button>
+            <button class="iconbtn" id="btnOpenUpload" title="Subir evidencias" style="display:none"><span
+                class="material-symbols-rounded">cloud_upload</span>Subir</button>
+          </div>
+          <div class="sideFactWrap">
+            <div class="sideTitle">
+              <h3>Dato curioso</h3>
+            </div>
+            <p id="factBody">—</p>
+          </div>
+        </div>
+
+        <!-- MAIN STACK -->
+        <div class="mainStack">
+          <div class="card" id="cardApp">
+            <div class="title">
+              <div>
+                <h2 id="welcome">Hola</h2>
+                <div class="who" id="who"></div>
+                <div class="statusbar" style="justify-content:flex-start;margin-top:10px;gap:8px;">
+                  <span class="badge good"><span id="rolTxt">Rol: —</span></span>
+                  <span class="badge info"><span id="munTxt">Municipio: —</span></span>
+                </div>
+              </div>
+            </div>
+            <div class="tabs">
+              <button class="tab active" id="tabCAP">Captura</button>
+              <button class="tab" id="tabNOTIFS" style="display:none">Notificaciones</button>
+              <button class="tab" id="tabADMIN" style="display:none">Admin</button>
+            </div>
+
+            <div id="sectionCapturaUnidad" style="display:none">
+              <div class="tabs">
+                <button class="tab active" id="tabSR">Bio</button>
+                <button class="tab" id="tabCONS">Consumibles</button>
+              </div>
+              <div id="formSR">
+                <!-- Campos SR -->
+                <button class="btn" id="btnSaveSR">Guardar</button>
+              </div>
+              <div id="formCONS" style="display:none">
+                <!-- Campos CONS -->
+                <button class="btn" id="btnSaveCONS">Guardar</button>
               </div>
             </div>
           </div>
-          <div class="tabs">
-            <button class="tab active" id="tabCAP">Captura</button>
-            <button class="tab" id="tabNOTIFS" style="display:none">Notificaciones</button>
-            <button class="tab" id="tabADMIN" style="display:none">Admin</button>
-          </div>
-          
-          <div id="sectionCapturaUnidad" style="display:none">
-            <div class="tabs">
-              <button class="tab active" id="tabSR">Bio</button>
-              <button class="tab" id="tabCONS">Consumibles</button>
-            </div>
-            <div id="formSR">
-               <!-- Campos SR -->
-               <button class="btn" id="btnSaveSR">Guardar</button>
-            </div>
-            <div id="formCONS" style="display:none">
-               <!-- Campos CONS -->
-               <button class="btn" id="btnSaveCONS">Guardar</button>
-            </div>
-          </div>
         </div>
       </div>
     </div>
   </div>
-</div>
 
-<div class="overlay" id="overlay">
-  <div class="loader">
-    <div class="loaderCircle"><svg viewBox="25 25 50 50"><circle cx="50" cy="50" r="20" fill="none" class="path"></circle></svg></div>
-    <div class="loaderTitle" id="overlayTitle">Procesando</div>
-    <div class="loaderText" id="overlayMsg">Espera...</div>
+  <div class="overlay" id="overlay">
+    <div class="loader">
+      <div class="loaderCircle"><svg viewBox="25 25 50 50">
+          <circle cx="50" cy="50" r="20" fill="none" class="path"></circle>
+        </svg></div>
+      <div class="loaderTitle" id="overlayTitle">Procesando</div>
+      <div class="loaderText" id="overlayMsg">Espera...</div>
+    </div>
   </div>
-</div>
 
-<div class="toast" id="toast"><div class="msg" id="toastMsg"></div></div>
+  <div class="toast" id="toast">
+    <div class="msg" id="toastMsg"></div>
+  </div>
 
-<script src="script.js"></script>
+  <script type="module" src="./script.js"></script>
 </body>
+
 </html>
